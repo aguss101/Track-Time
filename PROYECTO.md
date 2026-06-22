@@ -18,37 +18,39 @@ App **móvil personal** para medir tiempos de estudio/trabajo mediante un cronó
 | Frontend | Flutter (Dart) |
 | Shell nativa | Android (Java) + `MethodChannel` para comunicación Flutter ↔ Android |
 | Build | Gradle (Groovy DSL) |
-| Backend | Java + Spring Boot — paquete `com.tracktime` |
-| Base de datos | Supabase (acceso vía **API REST**, no SDK) |
-| Auth a Supabase | `service_role key` en el backend (en `.env`, **nunca** en el frontend) |
+| Base de datos | Supabase (acceso vía **API REST + RPC**, no SDK) |
+| Auth | `anon key` + políticas RLS en Supabase |
 | IDE | VS Code |
-| Deploy | Pendiente, **post-desarrollo** (sugerido: Oracle Cloud Free Tier, 24/7 gratis sin sleep) |
+| Deploy | No aplica — Flutter habla directo con Supabase, sin servidor que mantener |
 
-### Arquitectura de comunicación (Opción A — confirmada)
+### Arquitectura de comunicación
 
 ```
-Flutter → HTTP → Java API → Supabase REST
+Flutter (Dart) → HTTP → Supabase REST API
 ```
 
-El frontend **nunca** toca Supabase directamente. Todo pasa por la API Java. Único punto de control, credenciales solo en backend, frontend desacoplado de la BD.
+Flutter llama directamente a Supabase REST. No hay backend intermedio.
+La `anon key` vive en Flutter (app personal en el propio dispositivo, riesgo aceptado).
+La lógica de métricas (sumas, promedios) se calcula en Dart a partir de los datos que retornan las funciones RPC de Supabase.
 
 ### Decisiones descartadas (no implementar)
 
 - ❌ **UUID** → se usa `SERIAL` (IDs secuenciales).
-- ❌ **Edge Functions** → la lógica de métricas vive en Java.
+- ❌ **Backend Java / Spring Boot** → eliminado. Flutter habla directo con Supabase.
+- ❌ **Edge Functions** → las métricas se resuelven con funciones PostgreSQL (RPC).
 - ❌ **Supabase Auth / login / registro** → usuario único.
 - ❌ **Tabla `actividad_dias`** → reemplazada por columna array `dias`.
 - ❌ **Claude Design** → no aplica (app móvil Flutter, no web).
-- ❌ **Flutter hablando directo con Supabase** → siempre vía backend Java.
+- ❌ **service_role key** → se usa `anon key` + RLS.
 
 ---
 
 ## 3. Convenciones
 
 - **Idioma**: schema, carpetas, archivos y funciones en **español**.
-- **Nombres de archivo sin sufijo redundante**: un archivo dentro de `controladores/` se llama `Actividad.java`, no `ActividadControlador.java`. Aplica a toda la estructura.
-- **Timezone**: Argentina (UTC−3) fijo.
-- **Semana**: Lunes a Domingo.
+- **Nombres de archivo sin sufijo redundante**: un archivo dentro de `pantallas/` se llama `inicio.dart`, no `pantalla_inicio.dart`. Aplica a toda la estructura.
+- **Timezone**: Argentina (UTC−3) fijo — `America/Argentina/Buenos_Aires`.
+- **Semana**: Lunes a Domingo (ISO: lunes = 1, domingo = 7).
 
 ---
 
@@ -131,6 +133,257 @@ BEFORE INSERT ON sesiones
 FOR EACH ROW EXECUTE FUNCTION validar_sesion();
 ```
 
+### 4.3 RLS + Permisos
+
+```sql
+ALTER TABLE grupos     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE actividades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sesiones   ENABLE ROW LEVEL SECURITY;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON grupos      TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON actividades TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON sesiones    TO anon;
+
+GRANT USAGE, SELECT ON SEQUENCE grupos_id_seq      TO anon;
+GRANT USAGE, SELECT ON SEQUENCE actividades_id_seq TO anon;
+GRANT USAGE, SELECT ON SEQUENCE sesiones_id_seq    TO anon;
+
+CREATE POLICY "anon_grupos"      ON grupos      FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anon_actividades" ON actividades FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anon_sesiones"    ON sesiones    FOR ALL TO anon USING (true) WITH CHECK (true);
+```
+
+### 4.4 Funciones RPC (métricas)
+
+Flutter llama a estas funciones vía `POST /rest/v1/rpc/nombre_funcion`.
+
+**Métrica diaria:**
+```sql
+CREATE OR REPLACE FUNCTION obtener_metrica_diaria(p_id_actividad INT)
+RETURNS JSON LANGUAGE plpgsql AS $$
+DECLARE
+  v_tz        TEXT      := 'America/Argentina/Buenos_Aires';
+  v_hoy       DATE      := (NOW() AT TIME ZONE 'America/Argentina/Buenos_Aires')::DATE;
+  v_acumulado INT;
+  v_objetivo  INT;
+BEGIN
+  SELECT COALESCE(SUM(duracion), 0) INTO v_acumulado
+  FROM sesiones
+  WHERE id_actividad = p_id_actividad
+    AND (iniciada AT TIME ZONE v_tz)::DATE = v_hoy;
+
+  SELECT objetivo_diario INTO v_objetivo
+  FROM actividades WHERE id = p_id_actividad;
+
+  RETURN json_build_object(
+    'acumulado', v_acumulado,
+    'restante',  GREATEST(0, COALESCE(v_objetivo, 0) - v_acumulado),
+    'excedente', GREATEST(0, v_acumulado - COALESCE(v_objetivo, 0))
+  );
+END; $$;
+```
+
+**Métrica semanal:**
+```sql
+CREATE OR REPLACE FUNCTION obtener_metrica_semanal(p_id_actividad INT)
+RETURNS JSON LANGUAGE plpgsql AS $$
+DECLARE
+  v_tz             TEXT      := 'America/Argentina/Buenos_Aires';
+  v_ahora          TIMESTAMP := NOW() AT TIME ZONE 'America/Argentina/Buenos_Aires';
+  v_lunes          DATE      := DATE_TRUNC('week', v_ahora)::DATE;
+  v_dia_actual     SMALLINT  := EXTRACT(ISODOW FROM v_ahora)::SMALLINT;
+  v_acumulado      INT;
+  v_objetivo       INT;
+  v_dias           SMALLINT[];
+  v_sin_dias       BOOLEAN;
+  v_dias_restantes INT;
+  v_restante       INT;
+BEGIN
+  SELECT COALESCE(SUM(duracion), 0) INTO v_acumulado
+  FROM sesiones
+  WHERE id_actividad = p_id_actividad
+    AND (iniciada AT TIME ZONE v_tz)::DATE >= v_lunes;
+
+  SELECT objetivo_semanal, dias INTO v_objetivo, v_dias
+  FROM actividades WHERE id = p_id_actividad;
+
+  v_restante := GREATEST(0, COALESCE(v_objetivo, 0) - v_acumulado);
+  v_sin_dias := (v_dias IS NULL OR array_length(v_dias, 1) IS NULL);
+
+  IF v_sin_dias THEN
+    v_dias_restantes := 8 - v_dia_actual; -- hoy hasta domingo inclusive
+  ELSE
+    SELECT COUNT(*) INTO v_dias_restantes
+    FROM UNNEST(v_dias) d WHERE d >= v_dia_actual;
+  END IF;
+
+  RETURN json_build_object(
+    'acumulado',                v_acumulado,
+    'restante',                 v_restante,
+    'excedente',                GREATEST(0, v_acumulado - COALESCE(v_objetivo, 0)),
+    'dias_restantes',           v_dias_restantes,
+    'sin_dias_asignados',       v_sin_dias,
+    'promedio_diario_restante', CASE
+                                  WHEN v_dias_restantes = 0 THEN 0
+                                  ELSE ROUND(v_restante::NUMERIC / v_dias_restantes)
+                                END
+  );
+END; $$;
+```
+
+**Métrica mensual:**
+```sql
+CREATE OR REPLACE FUNCTION obtener_metrica_mensual(p_id_actividad INT)
+RETURNS JSON LANGUAGE plpgsql AS $$
+DECLARE
+  v_tz                TEXT      := 'America/Argentina/Buenos_Aires';
+  v_ahora             TIMESTAMP := NOW() AT TIME ZONE 'America/Argentina/Buenos_Aires';
+  v_inicio_mes        DATE      := DATE_TRUNC('month', v_ahora)::DATE;
+  v_fin_mes           DATE      := (DATE_TRUNC('month', v_ahora) + INTERVAL '1 month - 1 day')::DATE;
+  v_acumulado         INT;
+  v_objetivo          INT;
+  v_restante          INT;
+  v_semanas_restantes NUMERIC;
+BEGIN
+  SELECT COALESCE(SUM(duracion), 0) INTO v_acumulado
+  FROM sesiones
+  WHERE id_actividad = p_id_actividad
+    AND (iniciada AT TIME ZONE v_tz)::DATE >= v_inicio_mes;
+
+  SELECT objetivo_mensual INTO v_objetivo
+  FROM actividades WHERE id = p_id_actividad;
+
+  v_restante          := GREATEST(0, COALESCE(v_objetivo, 0) - v_acumulado);
+  v_semanas_restantes := CEIL(((v_fin_mes - v_ahora::DATE) + 1)::NUMERIC / 7);
+
+  RETURN json_build_object(
+    'acumulado',                 v_acumulado,
+    'restante',                  v_restante,
+    'excedente',                 GREATEST(0, v_acumulado - COALESCE(v_objetivo, 0)),
+    'semanas_restantes',         v_semanas_restantes,
+    'promedio_semanal_restante', CASE
+                                   WHEN v_semanas_restantes = 0 THEN 0
+                                   ELSE ROUND(v_restante::NUMERIC / v_semanas_restantes)
+                                 END
+  );
+END; $$;
+```
+
+**Métrica anual:**
+```sql
+CREATE OR REPLACE FUNCTION obtener_metrica_anual(p_id_actividad INT)
+RETURNS JSON LANGUAGE plpgsql AS $$
+DECLARE
+  v_tz          TEXT      := 'America/Argentina/Buenos_Aires';
+  v_ahora       TIMESTAMP := NOW() AT TIME ZONE 'America/Argentina/Buenos_Aires';
+  v_inicio_anio DATE      := DATE_TRUNC('year', v_ahora)::DATE;
+  v_acumulado   INT;
+  v_objetivo    INT;
+BEGIN
+  SELECT COALESCE(SUM(duracion), 0) INTO v_acumulado
+  FROM sesiones
+  WHERE id_actividad = p_id_actividad
+    AND (iniciada AT TIME ZONE v_tz)::DATE >= v_inicio_anio;
+
+  SELECT objetivo_anual INTO v_objetivo
+  FROM actividades WHERE id = p_id_actividad;
+
+  RETURN json_build_object(
+    'acumulado', v_acumulado,
+    'restante',  GREATEST(0, COALESCE(v_objetivo, 0) - v_acumulado),
+    'excedente', GREATEST(0, v_acumulado - COALESCE(v_objetivo, 0))
+  );
+END; $$;
+```
+
+**Resumen dashboard (todas las actividades):**
+```sql
+CREATE OR REPLACE FUNCTION obtener_resumen()
+RETURNS JSON LANGUAGE plpgsql AS $$
+DECLARE
+  v_tz         TEXT      := 'America/Argentina/Buenos_Aires';
+  v_ahora      TIMESTAMP := NOW() AT TIME ZONE 'America/Argentina/Buenos_Aires';
+  v_hoy        DATE      := v_ahora::DATE;
+  v_lunes      DATE      := DATE_TRUNC('week', v_ahora)::DATE;
+  v_dia_actual SMALLINT  := EXTRACT(ISODOW FROM v_ahora)::SMALLINT;
+BEGIN
+  RETURN (
+    SELECT json_agg(json_build_object(
+      'id',              a.id,
+      'nombre',          a.nombre,
+      'color',           a.color,
+      'objetivo_diario', a.objetivo_diario,
+      'acumulado_hoy',   COALESCE(hoy.total, 0),
+      'restante_hoy',    GREATEST(0, COALESCE(a.objetivo_diario, 0) - COALESCE(hoy.total, 0)),
+      'excedente_hoy',   GREATEST(0, COALESCE(hoy.total, 0) - COALESCE(a.objetivo_diario, 0)),
+      'acumulado_semana',  COALESCE(sem.total, 0),
+      'restante_semanal',  GREATEST(0, COALESCE(a.objetivo_semanal, 0) - COALESCE(sem.total, 0)),
+      'sin_dias_asignados', (a.dias IS NULL OR array_length(a.dias, 1) IS NULL),
+      'promedio_diario_restante_semana',
+        CASE
+          WHEN (a.dias IS NULL OR array_length(a.dias, 1) IS NULL) THEN
+            ROUND(
+              GREATEST(0, COALESCE(a.objetivo_semanal, 0) - COALESCE(sem.total, 0))::NUMERIC
+              / GREATEST(1, 8 - v_dia_actual)
+            )
+          WHEN (SELECT COUNT(*) FROM UNNEST(a.dias) d WHERE d >= v_dia_actual) = 0 THEN 0
+          ELSE
+            ROUND(
+              GREATEST(0, COALESCE(a.objetivo_semanal, 0) - COALESCE(sem.total, 0))::NUMERIC
+              / (SELECT COUNT(*) FROM UNNEST(a.dias) d WHERE d >= v_dia_actual)
+            )
+        END
+    ))
+    FROM actividades a
+    LEFT JOIN (
+      SELECT id_actividad, SUM(duracion)::INT AS total
+      FROM sesiones
+      WHERE (iniciada AT TIME ZONE v_tz)::DATE = v_hoy
+      GROUP BY id_actividad
+    ) hoy ON hoy.id_actividad = a.id
+    LEFT JOIN (
+      SELECT id_actividad, SUM(duracion)::INT AS total
+      FROM sesiones
+      WHERE (iniciada AT TIME ZONE v_tz)::DATE >= v_lunes
+      GROUP BY id_actividad
+    ) sem ON sem.id_actividad = a.id
+  );
+END; $$;
+```
+
+**Permisos de ejecución:**
+```sql
+GRANT EXECUTE ON FUNCTION obtener_metrica_diaria(INT) TO anon;
+GRANT EXECUTE ON FUNCTION obtener_metrica_semanal(INT) TO anon;
+GRANT EXECUTE ON FUNCTION obtener_metrica_mensual(INT) TO anon;
+GRANT EXECUTE ON FUNCTION obtener_metrica_anual(INT) TO anon;
+GRANT EXECUTE ON FUNCTION obtener_resumen() TO anon;
+```
+
+### 4.5 Procedimientos Almacenados (SP)
+
+**`iniciar_sesion(p_id_actividad)`** — cierra la sesión activa (si existe) y abre una nueva en una sola transacción atómica. Evita inconsistencia si el usuario cambia de actividad sin pausar primero.
+
+```sql
+CREATE OR REPLACE PROCEDURE iniciar_sesion(p_id_actividad INT)
+LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE sesiones
+  SET finalizada = NOW()
+  WHERE finalizada IS NULL;
+
+  INSERT INTO sesiones (id_actividad, iniciada)
+  VALUES (p_id_actividad, NOW());
+END; $$;
+
+GRANT EXECUTE ON PROCEDURE iniciar_sesion(INT) TO anon;
+```
+
+Flutter llama: `POST /rest/v1/rpc/iniciar_sesion` con `{"p_id_actividad": 2}`.
+El trigger `calcular_duracion` se dispara automáticamente sobre el UPDATE.
+
+> Para pausar, CRUD de actividades y grupos una sola llamada REST es suficiente — no justifican SP.
+
 ---
 
 ## 5. Modelo de Sesiones (cronómetro)
@@ -144,7 +397,7 @@ RESUME → INSERT sesion nueva (iniciada = now())
 STOP   → igual que PAUSE
 ```
 
-El backend suma todas las `duracion` de una misma actividad para los reportes.
+Flutter suma todas las `duracion` de una misma actividad para los reportes (vía RPC).
 
 **Ejemplo — Actividad "Lectura", martes:**
 ```
@@ -156,126 +409,92 @@ Total del día = 3600 seg = 60 min
 
 ---
 
-## 6. Lógica de Métricas (núcleo del backend)
+## 6. Lógica de Métricas
 
-> Esta es la lógica más importante de la app. El cronómetro descuenta tiempo de los objetivos en cascada: **diario → semanal → mensual → anual**.
+> Lógica más importante de la app. El cronómetro descuenta tiempo en cascada: **diario → semanal → mensual → anual**.
 
 ### 6.1 Concepto general
 
-Al iniciar una actividad, la pantalla muestra cuánto **falta** para el objetivo. Si me detengo a mitad, al continuar aparece el remanente. Cuando completo el objetivo diario y sigo, el excedente comienza a descontar del **semanal**, y así sucesivamente. Al iniciar el siguiente día, vuelve a descontar el objetivo de ese día.
+Al iniciar una actividad, la pantalla muestra cuánto **falta** para el objetivo. Si me detengo a mitad, al continuar aparece el remanente. Cuando completo el objetivo diario y sigo, el excedente comienza a descontar del **semanal**. Al iniciar el siguiente día, vuelve a descontar el objetivo de ese día.
 
 ### 6.2 Diario
 
 ```
-acumulado_hoy = SUM(duracion) WHERE id_actividad = X
-                AND DATE(iniciada) = hoy (UTC−3)
-
 restante_hoy  = MAX(0, objetivo_diario - acumulado_hoy)
 excedente_hoy = MAX(0, acumulado_hoy - objetivo_diario)
 ```
 
-`restante_hoy` y `excedente_hoy` son **mutuamente excluyentes**: gracias a `MAX(0, …)` nunca dan negativo, y mientras uno tiene valor el otro es 0.
+Mutuamente excluyentes. Nunca negativos.
 
-### 6.3 Semanal (promedio por días restantes)
+### 6.3 Semanal
 
 ```
-acumulado_semana = SUM(duracion) WHERE id_actividad = X
-                   AND iniciada >= lunes_actual (UTC−3)
-
 restante_semanal = MAX(0, objetivo_semanal - acumulado_semana)
-
-dias_restantes   = días configurados en actividad.dias que sean > hoy
-                   en la semana actual
-
-promedio_diario_restante_semana = restante_semanal / dias_restantes
+dias_restantes   = días configurados en dias[] >= hoy (o hoy→domingo si dias[] vacío)
+promedio_diario_restante = restante_semanal / dias_restantes
 ```
 
-**Comportamiento clave:** si hago de más un día, el promedio de los días restantes baja (se recalcula sobre el remanente).
+> Ejemplo: obj_semanal=300, miércoles acumuló 90 min (60 + 30 extra).
+> restante=210, días restantes=jue,vie,sáb=3 → promedio=**70 min/día**.
 
-> Ejemplo: objetivo_semanal = 300 min (5 h), días = lun, mié, jue, vie, sáb.
-> El miércoles hago 60 + 30 extra = 90 min acumulados en la semana.
-> restante_semanal = 210 min. Días restantes = jue, vie, sáb = 3.
-> promedio = 210 / 3 = **70 min/día**.
-
-### 6.4 Mensual (mismo patrón, por semanas)
+### 6.4 Mensual
 
 ```
-acumulado_mes     = SUM(duracion) WHERE id_actividad = X
-                    AND MONTH(iniciada) = mes_actual (UTC−3)
-
-restante_mensual  = MAX(0, objetivo_mensual - acumulado_mes)
-
-semanas_restantes = semanas que quedan hasta fin de mes
-
+restante_mensual         = MAX(0, objetivo_mensual - acumulado_mes)
+semanas_restantes        = CEIL(días_hasta_fin_de_mes / 7)
 promedio_semanal_restante = restante_mensual / semanas_restantes
 ```
 
 ### 6.5 Anual
 
-Acumulado del año vs `objetivo_anual`. Restante con `MAX(0, …)`.
+```
+restante_anual = MAX(0, objetivo_anual - acumulado_anio)
+```
 
-### 6.6 Casos borde y manejo de errores
+### 6.6 Casos borde
 
-**A) Actividad SIN días asignados (`actividad.dias` vacío):**
-- `dias_restantes` = días corridos desde hoy hasta domingo inclusive.
-  (Si hoy es miércoles → [mié, jue, vie, sáb, dom] = 5 días.)
-- Mostrar **cartel informativo NO bloqueante**:
-  > ⚠️ Esta actividad no tiene días asignados. El promedio semanal/mensual se calcula distribuyendo el tiempo restante entre hoy y el domingo, hasta que asignes días.
+**A) `actividad.dias` vacío:**
+- `dias_restantes` = días desde hoy hasta domingo inclusive.
+- Flutter muestra cartel NO bloqueante:
+  > ⚠️ Esta actividad no tiene días asignados. El promedio semanal se calcula distribuyendo el tiempo restante entre hoy y el domingo, hasta que asignes días.
 
-**B) Actividad CON días asignados y ninguno queda en la semana:**
-- `dias_restantes` = 0 → `promedio = 0` → **objetivo cumplido** (no es error).
-
-> Ejemplo: viernes, días configurados ya pasados → promedio = 0, objetivo cumplido.
-> Ejemplo: viernes sin días configurados → [vie, sáb, dom] = 3 días → promedio normal.
+**B) `actividad.dias` definido y sin días restantes en la semana:**
+- `dias_restantes = 0` → `promedio = 0` → objetivo cumplido (no es error).
 
 ---
 
-## 7. API REST (Java)
+## 7. Llamadas Supabase desde Flutter
 
-### Grupos
-```
-GET    /grupos
-POST   /grupos
-PUT    /grupos/{id}
-DELETE /grupos/{id}
-```
+### CRUD directo (REST)
 
-### Actividades
 ```
-GET    /actividades
-GET    /actividades/{id}
-POST   /actividades
-PUT    /actividades/{id}
-DELETE /actividades/{id}
+GET    /rest/v1/grupos
+POST   /rest/v1/grupos
+PATCH  /rest/v1/grupos?id=eq.{id}
+DELETE /rest/v1/grupos?id=eq.{id}
+
+GET    /rest/v1/actividades
+POST   /rest/v1/actividades
+PATCH  /rest/v1/actividades?id=eq.{id}
+DELETE /rest/v1/actividades?id=eq.{id}
 ```
 
 ### Sesiones
+
 ```
-POST   /sesiones/iniciar/{id_actividad}   ← play
-PATCH  /sesiones/pausar/{id_sesion}       ← pause / stop
-GET    /sesiones/activa                    ← consultar sesión en curso
+POST   /rest/v1/sesiones              ← play (body: {id_actividad, iniciada})
+PATCH  /rest/v1/sesiones?id=eq.{id}  ← pause/stop (body: {finalizada})
+GET    /rest/v1/sesiones?finalizada=is.null  ← sesión activa
 ```
 
-### Métricas
-```
-GET    /metricas/{id_actividad}/diario
-GET    /metricas/{id_actividad}/semanal
-GET    /metricas/{id_actividad}/mensual
-GET    /metricas/{id_actividad}/anual
-GET    /metricas/resumen                   ← todas las actividades para dashboard
-```
+### Métricas (RPC)
 
-**Forma de `/metricas/resumen` (por actividad):**
-```json
-{
-  "id": 1,
-  "nombre": "Lectura",
-  "color": "#4A90D9",
-  "objetivo_diario": 60,
-  "acumulado_hoy": 20,
-  "restante_hoy": 40,
-  "promedio_diario_restante_semana": 70
-}
+```
+POST   /rest/v1/rpc/obtener_metrica_diaria    body: {"p_id_actividad": 1}
+POST   /rest/v1/rpc/obtener_metrica_semanal   body: {"p_id_actividad": 1}
+POST   /rest/v1/rpc/obtener_metrica_mensual   body: {"p_id_actividad": 1}
+POST   /rest/v1/rpc/obtener_metrica_anual     body: {"p_id_actividad": 1}
+POST   /rest/v1/rpc/obtener_resumen           body: {}
 ```
 
 ---
@@ -284,54 +503,31 @@ GET    /metricas/resumen                   ← todas las actividades para dashbo
 
 ```
 track-time/
-├── backend/
-│   └── src/main/java/com/tracktime/
-│       ├── controladores/
-│       │   ├── Grupo.java
-│       │   ├── Actividad.java
-│       │   ├── Sesion.java
-│       │   └── Metrica.java
-│       ├── servicios/
-│       │   ├── Grupo.java
-│       │   ├── Actividad.java
-│       │   ├── Sesion.java
-│       │   └── Metrica.java
-│       ├── modelos/
-│       │   ├── Grupo.java
-│       │   ├── Actividad.java
-│       │   └── Sesion.java
-│       ├── repositorios/
-│       │   ├── Grupo.java
-│       │   ├── Actividad.java
-│       │   └── Sesion.java
-│       └── configuracion/
-│           └── Supabase.java
-│   └── src/main/resources/
-│       └── application.properties
-│
-└── frontend/
-    └── lib/
-        ├── pantallas/
-        │   ├── inicio/
-        │   ├── actividades/
-        │   ├── cronometro/
-        │   └── metricas/
-        ├── componentes/
-        ├── servicios/
-        │   └── api.dart
-        ├── modelos/
-        │   ├── grupo.dart
-        │   ├── actividad.dart
-        │   └── sesion.dart
-        └── constantes/
-            └── colores.dart
+└── lib/
+    ├── pantallas/
+    │   ├── inicio/
+    │   ├── actividades/
+    │   ├── cronometro/
+    │   └── metricas/
+    ├── componentes/
+    ├── servicios/
+    │   └── supabase.dart       ← cliente HTTP, anon key, todas las llamadas REST/RPC
+    ├── modelos/
+    │   ├── grupo.dart
+    │   ├── actividad.dart
+    │   └── sesion.dart
+    └── constantes/
+        └── colores.dart
 ```
+
+La `anon key` y la URL de Supabase viven en `supabase.dart` (o en un `.env` cargado con `flutter_dotenv`, gitignoreado).
 
 ---
 
 ## 9. Pantallas Flutter (UI / Navegación)
 
 ### Bottom Navigation Bar (parte inferior)
+
 ```
 ├── Inicio          (izquierda)
 ├── [+] Cronómetro  (centro, botón elevado)
@@ -339,32 +535,29 @@ track-time/
 ```
 
 ### Métricas
-- **No** entra en el navigation bar.
-- Botón pequeño **arriba a la izquierda** (desde Inicio) que abre las métricas.
+- No entra en el navigation bar.
+- Botón pequeño **arriba a la izquierda** desde Inicio.
 
 ### Detalle por pantalla
 
 **Inicio**
-- Dashboard: resumen diario de todas las actividades.
-- Progreso visual + indicador de cuánto falta para el objetivo diario.
-- Muestra la sesión activa si existe.
+- Dashboard: resumen diario de todas las actividades (vía `obtener_resumen`).
+- Progreso visual + cuánto falta para el objetivo diario.
+- Sesión activa si existe.
 - Botón métricas (arriba izquierda).
 
-**Cronómetro** (pantalla propia, abierta desde botón central; también accesible)
+**Cronómetro** (pantalla propia desde botón central)
 - Seleccionar actividad → Play / Pause / Stop.
-- Muestra `restante_hoy` y promedio semanal en tiempo real.
+- Muestra `restante_hoy` y `promedio_diario_restante` en tiempo real.
 
 **Actividades**
-- Lista de actividades agrupadas por grupo.
-- Crear/editar actividad: nombre, **color elegible al crear**, días, meses, objetivos (diario, semanal, mensual, anual).
-- Crear/editar grupo: nombre, color. **Los grupos se gestionan dentro de Actividades** (no tienen sección propia).
-- Eliminar actividad / grupo.
+- Lista agrupada por grupo.
+- Crear/editar actividad: nombre, color (elegible), días, meses, objetivos (diario, semanal, mensual, anual).
+- Crear/editar/eliminar grupo dentro de esta misma sección.
+- Eliminar actividad.
 
 **Métricas**
-- Vista diaria.
-- Vista semanal.
-- Vista mensual.
-- Vista anual.
+- Vista diaria / semanal / mensual / anual.
 - Por actividad, seleccionable.
 
 ---
@@ -373,19 +566,18 @@ track-time/
 
 | Tema | Decisión |
 |---|---|
-| Plataforma | App móvil (Flutter) |
+| Plataforma | App móvil Flutter |
 | Usuario | Único, sin auth |
-| Comunicación | Flutter → Java API → Supabase REST |
-| Acceso BD | `service_role key` en backend |
+| Comunicación | Flutter → Supabase REST + RPC directo |
+| Acceso BD | `anon key` + RLS |
+| Backend Java | Eliminado |
 | IDs | `SERIAL` (no UUID) |
 | Color de actividad | Elegible por el usuario al crear |
 | Objetivos | Diario, semanal, mensual, anual |
 | Días/meses de actividad | Arrays opcionales, guía organizativa |
-| Timezone | Argentina UTC−3 |
-| Semana | Lunes a Domingo |
+| Timezone | Argentina UTC−3 (`America/Argentina/Buenos_Aires`) |
+| Semana | Lunes a Domingo (ISODOW) |
 | Duración | Calculada por trigger al pausar |
-| Sesión única | Validada por trigger (no dos activas) |
-| Lógica métricas | En Java (no Edge Functions) |
-| Deploy | Post-desarrollo (sugerido Oracle Cloud Free Tier) |
-| Paquete Java | `com.tracktime` |
-```
+| Sesión única | Validada por trigger |
+| Lógica métricas | Funciones RPC PostgreSQL |
+| Deploy | No aplica (sin servidor) |
