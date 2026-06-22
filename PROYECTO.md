@@ -562,6 +562,54 @@ La `anon key` y la URL de Supabase viven en `supabase.dart` (o en un `.env` carg
 
 ---
 
+## 11. Diseño Visual
+
+### 11.1 Paleta de colores — modo oscuro único
+
+| Token | Hex | Uso |
+|---|---|---|
+| bg-pantalla | #1E1E21 | Fondo de todas las pantallas |
+| bg-card | #2E2E33 | Cards y surfaces sobre el fondo |
+| bg-elevado | #55544F | Modals, chips seleccionados, estados activos |
+| texto-primario | #EDECE8 | Texto principal |
+| texto-secundario | #9A9890 | Labels, subtítulos |
+| inactivo | #55544F | Iconos y texto inactivos |
+| acento | #9DD929 | Ring timer, botones activos, tab seleccionado |
+
+### 11.2 Colores de actividades
+
+Set fijo de 8 opciones que el usuario elige al crear una actividad:
+
+| Nombre | Hex |
+|---|---|
+| Rojo | #E05840 |
+| Naranja | #E88A20 |
+| Amarillo | #D4B030 |
+| Verde | #4CB870 |
+| Teal | #27B89A |
+| Azul | #4A90E8 |
+| Violeta | #6D14CC |
+| Rosa | #B715D4 |
+
+### 11.3 Tipografía
+
+Fuente del sistema del dispositivo. En Flutter: `Theme.of(context).textTheme` sin override de `fontFamily`.
+
+### 11.4 Decisiones de UI
+
+**Dashboard (Inicio):**
+- Progreso diario por actividad: gráfico **donut/anillo**
+- Actividad sin objetivo diario: muestra solo el tiempo acumulado, sin anillo
+
+**Cronómetro:**
+- Formato de tiempo: `HH:MM:SS`
+- Anillo de progreso hacia el objetivo diario de la actividad
+
+**Sesión activa:**
+- Indicador: barra horizontal delgada del **color de la actividad** en el top de cualquier pantalla mientras haya una sesión corriendo
+
+---
+
 ## 10. Resumen de Decisiones Confirmadas
 
 | Tema | Decisión |
