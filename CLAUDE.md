@@ -6,7 +6,9 @@
 App móvil Flutter personal de tracking de tiempo de estudio/trabajo. Usuario único, sin auth, sin backend. Flutter habla directamente con Supabase REST + RPC.
 
 ## Stack
-Flutter (Dart) · Android + MethodChannel · Supabase REST+RPC (sin SDK) · anon key + RLS · VS Code
+Flutter (Dart) · Riverpod (estado) · Android + MethodChannel (foreground service en **Kotlin**) · Supabase REST+RPC (sin SDK) · anon key + RLS · VS Code
+
+> Nota: el servicio nativo se implementó en **Kotlin**, no Java. `flutter create` scaffoldea `MainActivity.kt` en Kotlin; mezclar Java hubiera sumado fricción de build sin beneficio. La spec original decía "Java" — desviación consciente.
 
 ## Convenciones — aplicar siempre
 - Idioma: **español** en todo (archivos, carpetas, clases, variables, funciones, DB, comentarios)
@@ -16,19 +18,34 @@ Flutter (Dart) · Android + MethodChannel · Supabase REST+RPC (sin SDK) · anon
 - IDs: `SERIAL` — no UUID
 - Tipografía: `Theme.of(context).textTheme` — sin override de fuente (usa la del sistema)
 
-## Estructura `lib/`
+## Estructura `lib/` (real)
 ```
 lib/
-├── pantallas/
-│   ├── inicio/
-│   ├── cronometro/
-│   ├── actividades/
-│   └── metricas/
-├── componentes/
-├── servicios/supabase.dart      ← única clase que toca HTTP
-├── modelos/grupo.dart  actividad.dart  sesion.dart
-└── constantes/colores.dart
+├── main.dart                    ← ProviderScope + tema + SplashPage
+├── constantes/colores.dart  tema.dart
+├── modelos/grupo.dart  actividad.dart  sesion.dart  resumen.dart  metrica.dart
+├── servicios/
+│   ├── supabase.dart            ← única clase que toca HTTP (singleton)
+│   └── cronometro_nativo.dart   ← MethodChannel → foreground service
+├── estado/                      ← Riverpod
+│   ├── proveedores.dart         ← supabase, grupos, actividades, resumen
+│   ├── sesion_activa.dart       ← Notifier con timer en vivo + servicio nativo
+│   └── metricas.dart            ← FutureProvider.family por actividad
+├── util/formato.dart            ← HH:MM:SS y duraciones compactas
+├── componentes/anillo_progreso.dart  barra_sesion_activa.dart  selector_color.dart
+└── pantallas/
+    ├── splash/splash.dart
+    ├── shell.dart               ← bottom nav + IndexedStack
+    ├── inicio/inicio.dart
+    ├── cronometro/cronometro.dart
+    ├── actividades/actividades.dart  formulario_actividad.dart  gestion_grupos.dart
+    └── metricas/metricas.dart
 ```
+
+## Para correr
+1. Completar `_url` y `_anonKey` en `lib/servicios/supabase.dart` (placeholders con TODO).
+2. `flutter pub get` · `flutter run` (con dispositivo/emulador).
+3. Splash nativo: regenerar con `dart run flutter_native_splash:create` si cambia el color.
 
 ## Supabase — patrón de llamada (HTTP directo, sin SDK)
 ```dart
@@ -75,6 +92,8 @@ await http.post(
 
 **Colores de actividades (set fijo de 8, usuario elige uno):**
 `#E05840` Rojo · `#E88A20` Naranja · `#D4B030` Amarillo · `#4CB870` Verde · `#27B89A` Teal · `#4A90E8` Azul · `#6D14CC` Violeta · `#B715D4` Rosa
+
+**Logo:** cronómetro con líneas de velocidad — solo en splash screen, nunca dentro de la app. Asset en `assets/imagenes/logo.svg`. Color `#EDECE8` sobre fondo `#1E1E21`. Implementar con `flutter_native_splash`.
 
 **UI decisions confirmadas:**
 - Timer: formato `HH:MM:SS` + anillo de progreso hacia el objetivo diario

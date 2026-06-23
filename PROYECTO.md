@@ -595,6 +595,14 @@ Set fijo de 8 opciones que el usuario elige al crear una actividad:
 
 Fuente del sistema del dispositivo. En Flutter: `Theme.of(context).textTheme` sin override de `fontFamily`.
 
+### 11.3 Logo y splash screen
+
+- **Logo:** cronómetro con líneas de velocidad (estilo outline/flat)
+- **Aparece:** solo en el splash screen, antes de abrir la app — no se usa en ninguna pantalla interna
+- **Color en splash:** `#EDECE8` (blanco cálido) sobre fondo `#1E1E21`
+- **Asset:** guardar en `assets/imagenes/logo.png` (y `.svg` si se dispone del vector)
+- **Implementación:** paquete `flutter_native_splash` con `background_color: #1E1E21`
+
 ### 11.4 Decisiones de UI
 
 **Dashboard (Inicio):**
