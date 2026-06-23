@@ -17,6 +17,7 @@ Flutter (Dart) · Riverpod (estado) · Android + MethodChannel (foreground servi
 - Semana: ISODOW (lunes=1, domingo=7)
 - IDs: `SERIAL` — no UUID
 - Tipografía: `Theme.of(context).textTheme` — sin override de fuente (usa la del sistema)
+- **Sin comentarios en el código** — ni de bloque ni de línea. Los nombres de variables/funciones deben ser suficientemente descriptivos.
 
 ## Estructura `lib/` (real)
 ```
@@ -43,9 +44,13 @@ lib/
 ```
 
 ## Para correr
-1. Completar `_url` y `_anonKey` en `lib/servicios/supabase.dart` (placeholders con TODO).
-2. `flutter pub get` · `flutter run` (con dispositivo/emulador).
-3. Splash nativo: regenerar con `dart run flutter_native_splash:create` si cambia el color.
+1. Credenciales: crear `env.json` en la raíz con `SUPABASE_URL` y `SUPABASE_KEY` (anon public). `env.json` está gitignoreado.
+2. `flutter pub get`.
+3. Correr inyectando las credenciales:
+   `flutter run --dart-define-from-file=env.json` (en VS Code, F5 ya lo hace vía `.vscode/launch.json`).
+4. Splash nativo: regenerar con `dart run flutter_native_splash:create` si cambia el color.
+
+> Las credenciales NO van hardcodeadas en `supabase.dart`: se leen con `String.fromEnvironment`. Si faltan, `Supabase.verificarCredenciales()` en `main()` corta con un mensaje claro.
 
 ## Supabase — patrón de llamada (HTTP directo, sin SDK)
 ```dart

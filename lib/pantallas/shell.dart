@@ -7,8 +7,6 @@ import 'inicio/inicio.dart';
 import 'cronometro/cronometro.dart';
 import 'actividades/actividades.dart';
 
-/// Contenedor principal: barra de sesión activa + las 3 vistas + bottom nav.
-/// Índices: 0 = Inicio · 1 = Cronómetro · 2 = Actividades.
 class Shell extends ConsumerStatefulWidget {
   const Shell({super.key});
 
@@ -99,7 +97,7 @@ class _BarraNav extends StatelessWidget {
             activo: indice == 0,
             alTocar: () => alElegir(0),
           ),
-          const SizedBox(width: 60), // hueco para el FAB
+          const SizedBox(width: 60),
           _ItemNav(
             icono: Icons.list_alt_outlined,
             iconoActivo: Icons.list_alt,

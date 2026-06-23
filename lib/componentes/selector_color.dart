@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../constantes/colores.dart';
 
-/// Grilla de los 8 colores fijos para elegir el color de una actividad.
 class SelectorColor extends StatelessWidget {
   final String seleccionadoHex;
   final ValueChanged<String> alElegir;

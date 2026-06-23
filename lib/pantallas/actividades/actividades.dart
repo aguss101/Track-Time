@@ -9,8 +9,6 @@ import '../../util/formato.dart';
 import 'formulario_actividad.dart';
 import 'gestion_grupos.dart';
 
-/// Lista de actividades agrupada por grupo. Permite crear/editar/eliminar
-/// actividades y abrir la gestión de grupos.
 class ActividadesPage extends ConsumerWidget {
   const ActividadesPage({super.key});
 
@@ -140,7 +138,6 @@ class _ListaAgrupada extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Agrupar por idGrupo; null va al final como "Sin grupo".
     final porGrupo = <int?, List<Actividad>>{};
     for (final a in actividades) {
       porGrupo.putIfAbsent(a.idGrupo, () => []).add(a);

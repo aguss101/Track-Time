@@ -5,7 +5,6 @@ import '../../constantes/colores.dart';
 import '../../estado/proveedores.dart';
 import '../../modelos/grupo.dart';
 
-/// Abre el panel de gestión de grupos como bottom sheet.
 Future<void> mostrarGestionGrupos(BuildContext context) {
   return showModalBottomSheet(
     context: context,

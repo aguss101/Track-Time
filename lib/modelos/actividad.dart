@@ -1,12 +1,3 @@
-/// Modelo de la tabla `actividades`.
-///
-/// `actividades(id, id_grupo FK, nombre, color, dias SMALLINT[],
-///  meses SMALLINT[], objetivo_diario/semanal/mensual/anual INT,
-///  creado TIMESTAMPTZ)`
-///
-/// - `dias`: [1..7] ISODOW (1=lunes ... 7=domingo). Opcional.
-/// - `meses`: [1..12]. Opcional.
-/// - objetivos en segundos. Opcionales (null = sin objetivo).
 class Actividad {
   final int id;
   final int? idGrupo;
@@ -54,7 +45,6 @@ class Actividad {
     );
   }
 
-  /// Para INSERT/PATCH — no envía `id` ni `creado` (los maneja la DB).
   Map<String, dynamic> toJson() {
     return {
       'id_grupo': idGrupo,

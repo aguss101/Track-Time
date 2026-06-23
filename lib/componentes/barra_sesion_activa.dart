@@ -5,9 +5,6 @@ import '../constantes/colores.dart';
 import '../estado/sesion_activa.dart';
 import '../util/formato.dart';
 
-/// Franja horizontal delgada del color de la actividad en curso.
-/// Se muestra en el top de las pantallas cuando hay una sesión activa.
-/// Tocarla lleva al cronómetro.
 class BarraSesionActiva extends ConsumerWidget {
   final VoidCallback? alTocar;
 

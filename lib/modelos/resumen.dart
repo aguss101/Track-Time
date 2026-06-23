@@ -1,5 +1,3 @@
-/// Fila del dashboard que devuelve la RPC `obtener_resumen()`.
-/// Ver PROYECTO.md sección 4.4.
 class ResumenActividad {
   final int id;
   final String nombre;
@@ -29,8 +27,6 @@ class ResumenActividad {
 
   bool get tieneObjetivoDiario => objetivoDiario != null && objetivoDiario! > 0;
 
-  /// Fracción 0..1 del objetivo diario completado hoy.
-  /// Si no hay objetivo, devuelve 0 (el dashboard no muestra anillo).
   double get fraccionDiaria {
     if (!tieneObjetivoDiario) return 0;
     return (acumuladoHoy / objetivoDiario!).clamp(0.0, 1.0);

@@ -8,8 +8,6 @@ import '../../estado/proveedores.dart';
 import '../../modelos/actividad.dart';
 import '../../modelos/grupo.dart';
 
-/// Formulario para crear o editar una actividad.
-/// Si [actividad] es null, es alta; si no, edición.
 class FormularioActividad extends ConsumerStatefulWidget {
   final Actividad? actividad;
   const FormularioActividad({super.key, this.actividad});
@@ -28,7 +26,6 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
   late Set<int> _dias;
   late Set<int> _meses;
 
-  // Objetivos en segundos (null = sin objetivo).
   int? _objDiario;
   int? _objSemanal;
   int? _objMensual;
@@ -147,7 +144,7 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
             Wrap(
               spacing: 8,
               children: List.generate(7, (i) {
-                final dia = i + 1; // ISODOW 1..7
+                final dia = i + 1;
                 final activo = _dias.contains(dia);
                 return _Chip(
                   texto: _diasLabel[i],
@@ -318,7 +315,6 @@ class _DropdownGrupo extends StatelessWidget {
   }
 }
 
-/// Campo de objetivo: horas + minutos → segundos. Vacío = sin objetivo.
 class _CampoObjetivo extends StatefulWidget {
   final String etiqueta;
   final int? segundos;

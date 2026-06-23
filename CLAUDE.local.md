@@ -7,8 +7,8 @@
 - Emulador Android configurado localmente en VS Code
 
 ## Variables sensibles
-- Supabase URL y anon key van en `lib/servicios/supabase.dart`
-- Si se usa `.env`, agregar al `.gitignore`
+- Credenciales Supabase (`SUPABASE_URL`, `SUPABASE_KEY` = anon public) van en `env.json` (raíz del proyecto, gitignoreado).
+- Se inyectan en compilación con `--dart-define-from-file=env.json` y se leen en Dart con `String.fromEnvironment`. NO se hardcodean en `supabase.dart`.
 
 ## Preferencias de desarrollo
 - Branch de trabajo: `dev--`

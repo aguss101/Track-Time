@@ -11,15 +11,6 @@ import android.graphics.Color
 import android.os.Build
 import android.os.IBinder
 
-/**
- * Foreground service que mantiene una notificación persistente con el tiempo
- * de la sesión activa, contando aunque la app esté en segundo plano.
- *
- * La notificación usa el cronómetro nativo de Android (setUsesChronometer +
- * setWhen), así que el conteo lo lleva el sistema sin un timer propio.
- *
- * Controlado desde Flutter vía el MethodChannel en [MainActivity].
- */
 class CronometroService : Service() {
 
     companion object {
@@ -68,8 +59,8 @@ class CronometroService : Service() {
             .setContentText("Cronómetro en curso")
             .setSmallIcon(R.drawable.ic_cronometro)
             .setOngoing(true)
-            .setUsesChronometer(true)   // muestra el tiempo corriendo
-            .setWhen(iniciada)          // desde el inicio real de la sesión
+            .setUsesChronometer(true)
+            .setWhen(iniciada)
             .setContentIntent(pending)
 
         parsearColor(colorHex)?.let { builder.setColor(it) }

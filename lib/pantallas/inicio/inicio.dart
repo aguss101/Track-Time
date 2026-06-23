@@ -8,8 +8,6 @@ import '../../modelos/resumen.dart';
 import '../../util/formato.dart';
 import '../metricas/metricas.dart';
 
-/// Dashboard. Resumen diario de todas las actividades (RPC `obtener_resumen`).
-/// Botón de métricas arriba a la izquierda (no va en el nav).
 class InicioPage extends ConsumerWidget {
   const InicioPage({super.key});
 
@@ -150,7 +148,6 @@ class _CardActividad extends StatelessWidget {
 
   Widget _detalle() {
     if (!r.tieneObjetivoDiario) {
-      // Sin objetivo: solo tiempo acumulado.
       return Text(
         Formato.compacto(r.acumuladoHoy),
         style: const TextStyle(fontSize: 14, color: Colores.textoSecundario),

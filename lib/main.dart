@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'constantes/colores.dart';
 import 'constantes/tema.dart';
+import 'servicios/supabase.dart';
 import 'pantallas/splash/splash.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  Supabase.verificarCredenciales();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colores.pantalla,

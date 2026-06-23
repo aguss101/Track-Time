@@ -7,20 +7,22 @@ import '../modelos/sesion.dart';
 import '../modelos/resumen.dart';
 import '../modelos/metrica.dart';
 
-/// Cliente HTTP único hacia Supabase (REST + RPC, sin SDK).
-///
-/// Patrón de llamada definido en CLAUDE.md y PROYECTO.md sección 7.
-/// Esta es la ÚNICA clase de la app que toca HTTP.
 class Supabase {
   Supabase._();
   static final Supabase instancia = Supabase._();
 
-  // ── Credenciales ────────────────────────────────────
-  // TODO(Agustin): completar con la URL y anon key de tu proyecto Supabase.
-  // App personal en el propio dispositivo — riesgo de exponer anon key aceptado
-  // (ver PROYECTO.md sección 2). RLS + anon key limitan el acceso.
-  static const String _url = 'https://TU_PROYECTO.supabase.co';
-  static const String _anonKey = 'TU_ANON_KEY';
+  static const String _url = String.fromEnvironment('SUPABASE_URL');
+  static const String _anonKey = String.fromEnvironment('SUPABASE_KEY');
+
+  static void verificarCredenciales() {
+    if (_url.isEmpty || _anonKey.isEmpty) {
+      throw StateError(
+        'Faltan las credenciales de Supabase. Corré la app con '
+        '--dart-define-from-file=env.json '
+        '(creá env.json en la raíz con SUPABASE_URL y SUPABASE_KEY).',
+      );
+    }
+  }
 
   static const Map<String, String> _headers = {
     'apikey': _anonKey,
@@ -121,7 +123,6 @@ class Supabase {
   // SESIONES
   // ════════════════════════════════════════════════════
 
-  /// Devuelve la sesión activa (finalizada IS NULL) o null si no hay ninguna.
   Future<Sesion?> sesionActiva() async {
     final r = await http.get(
       Uri.parse('$_url/rest/v1/sesiones?finalizada=is.null&limit=1'),
@@ -133,7 +134,6 @@ class Supabase {
     return Sesion.fromJson(lista.first as Map<String, dynamic>);
   }
 
-  /// Pausa/detiene una sesión: setea `finalizada`. El trigger calcula `duracion`.
   Future<Sesion> pausarSesion(int idSesion) async {
     final ahora = DateTime.now().toUtc().toIso8601String();
     final r = await http.patch(
@@ -147,11 +147,9 @@ class Supabase {
   }
 
   // ════════════════════════════════════════════════════
-  // SP — iniciar_sesion (atómico)
+  // SP — iniciar_sesion
   // ════════════════════════════════════════════════════
 
-  /// Cierra la sesión activa (si existe) y abre una nueva, en una transacción.
-  /// Ver PROYECTO.md sección 4.5.
   Future<void> iniciarSesion(int idActividad) async {
     final r = await http.post(
       Uri.parse('$_url/rest/v1/rpc/iniciar_sesion'),

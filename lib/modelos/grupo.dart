@@ -1,5 +1,3 @@
-/// Modelo de la tabla `grupos`.
-/// `grupos(id SERIAL PK, nombre TEXT, color TEXT)`
 class Grupo {
   final int id;
   final String nombre;
@@ -19,7 +17,6 @@ class Grupo {
     );
   }
 
-  /// Para INSERT/PATCH no se envía `id` (lo asigna el SERIAL de la DB).
   Map<String, dynamic> toJson() {
     return {
       'nombre': nombre,

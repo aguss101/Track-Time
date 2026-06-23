@@ -1,10 +1,3 @@
-/// Modelo de la tabla `sesiones`.
-///
-/// `sesiones(id, id_actividad FK, iniciada TIMESTAMPTZ,
-///  finalizada TIMESTAMPTZ, duracion INT)`
-///
-/// Una sesión activa tiene `finalizada == null`. La `duracion` (en segundos)
-/// la calcula el trigger `calcular_duracion` al hacer UPDATE SET finalizada.
 class Sesion {
   final int id;
   final int idActividad;
@@ -22,8 +15,6 @@ class Sesion {
 
   bool get estaActiva => finalizada == null;
 
-  /// Segundos transcurridos hasta [ahora] si la sesión está activa,
-  /// o la [duracion] calculada por el trigger si ya finalizó.
   int transcurridos([DateTime? ahora]) {
     if (duracion != null) return duracion!;
     final ref = ahora ?? DateTime.now();

@@ -9,9 +9,6 @@ import '../../estado/metricas.dart';
 import '../../modelos/actividad.dart';
 import '../../util/formato.dart';
 
-/// Pantalla del cronómetro: elegir actividad, Play / Pausar / Detener.
-/// Muestra HH:MM:SS + anillo de progreso hacia el objetivo diario, y en vivo
-/// el restante de hoy y el promedio diario restante de la semana.
 class CronometroPage extends ConsumerStatefulWidget {
   const CronometroPage({super.key});
 
@@ -27,7 +24,6 @@ class _CronometroPageState extends ConsumerState<CronometroPage> {
     final estado = ref.watch(sesionActivaProvider);
     final actividades = ref.watch(actividadesProvider);
 
-    // La actividad mostrada: la activa si corre, si no la elegida a mano.
     final actividad = estado.hayActiva ? estado.actividad : _seleccionada;
 
     return actividades.when(
@@ -60,7 +56,6 @@ class _CronometroPageState extends ConsumerState<CronometroPage> {
               corriendo: estado.hayActiva,
               alElegir: (a) {
                 if (estado.hayActiva) {
-                  // Cambiar de actividad sin pausar: el SP cierra y abre.
                   ref.read(sesionActivaProvider.notifier).iniciar(a);
                 }
                 setState(() => _seleccionada = a);
@@ -176,7 +171,6 @@ class _Reloj extends ConsumerWidget {
       error: (_, _) => _anillo(color, transcurridos, null, null),
       data: (m) {
         final obj = actividad.objetivoDiario ?? 0;
-        // acumulado de hoy = sesiones cerradas + lo que corre ahora.
         final acumuladoVivo = m.diaria.acumulado + transcurridos;
         final restanteVivo = obj > 0 ? (obj - acumuladoVivo).clamp(0, obj) : 0;
         final progreso = obj > 0 ? acumuladoVivo / obj : 0.0;

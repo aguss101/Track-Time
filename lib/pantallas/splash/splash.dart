@@ -4,8 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../constantes/colores.dart';
 import '../shell.dart';
 
-/// Pantalla de bienvenida con el logo. Se muestra brevemente al abrir la app
-/// (sobre el splash nativo de color sólido) y luego entra al Shell.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 

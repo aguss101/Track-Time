@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'colores.dart';
 
-/// Tema oscuro único de la app.
-///
-/// No se define `fontFamily` a propósito: la tipografía es la del sistema
-/// del dispositivo (ver PROYECTO.md sección 11.3 / CLAUDE.md).
 ThemeData construirTema() {
   final base = ThemeData.dark(useMaterial3: true);
 

@@ -3,13 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../constantes/colores.dart';
 
-/// Anillo circular de progreso reutilizable.
-///
-/// Lo usan el dashboard (donut chico por actividad) y el cronómetro
-/// (anillo grande hacia el objetivo diario).
-///
-/// - [progreso] 0..1. Si supera 1 (excedente), el anillo queda completo.
-/// - [child] se centra dentro del anillo (ej. el tiempo HH:MM:SS).
+/// - [progreso].
+/// - [child]
 class AnilloProgreso extends StatelessWidget {
   final double progreso;
   final Color color;
@@ -17,7 +12,6 @@ class AnilloProgreso extends StatelessWidget {
   final double grosor;
   final Widget? child;
 
-  /// Cuando no hay objetivo, el anillo se dibuja apenas marcado (sin progreso).
   final bool sinObjetivo;
 
   const AnilloProgreso({
@@ -82,7 +76,7 @@ class _AnilloPainter extends CustomPainter {
       ..strokeWidth = grosor
       ..strokeCap = StrokeCap.round;
 
-    const inicio = -math.pi / 2; // arranca arriba (12 en punto)
+    const inicio = -math.pi / 2;
     final barrido = 2 * math.pi * progreso;
 
     canvas.drawArc(

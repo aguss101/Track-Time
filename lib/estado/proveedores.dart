@@ -5,7 +5,6 @@ import '../modelos/grupo.dart';
 import '../modelos/actividad.dart';
 import '../modelos/resumen.dart';
 
-/// Acceso al cliente HTTP único.
 final supabaseProvider = Provider<Supabase>((ref) => Supabase.instancia);
 
 // ════════════════════════════════════════════════════
@@ -37,7 +36,6 @@ class GruposNotifier extends AsyncNotifier<List<Grupo>> {
     await _db.eliminarGrupo(id);
     ref.invalidateSelf();
     await future;
-    // Las actividades pueden haber quedado sin grupo (ON DELETE SET NULL).
     ref.invalidate(actividadesProvider);
   }
 }
@@ -78,7 +76,7 @@ class ActividadesNotifier extends AsyncNotifier<List<Actividad>> {
 }
 
 // ════════════════════════════════════════════════════
-// RESUMEN (dashboard de Inicio)
+// RESUMEN
 // ════════════════════════════════════════════════════
 
 final resumenProvider =

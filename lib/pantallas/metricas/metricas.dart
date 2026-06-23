@@ -8,7 +8,6 @@ import '../../modelos/actividad.dart';
 import '../../modelos/metrica.dart';
 import '../../util/formato.dart';
 
-/// Pantalla de métricas: por actividad y período (diario/semanal/mensual/anual).
 class MetricasPage extends ConsumerStatefulWidget {
   const MetricasPage({super.key});
 

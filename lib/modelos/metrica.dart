@@ -1,11 +1,3 @@
-/// Resultado de las RPC de métricas (`obtener_metrica_diaria/semanal/mensual/anual`).
-///
-/// Todas comparten `acumulado`, `restante` y `excedente` (segundos).
-/// Los campos extra aplican solo a ciertos períodos:
-/// - semanal: `diasRestantes`, `sinDiasAsignados`, `promedioDiarioRestante`
-/// - mensual: `semanasRestantes`, `promedioSemanalRestante`
-///
-/// Ver PROYECTO.md sección 4.4.
 enum Periodo { diario, semanal, mensual, anual }
 
 class Metrica {
@@ -14,12 +6,12 @@ class Metrica {
   final int restante;
   final int excedente;
 
-  // Solo semanal
+
   final int? diasRestantes;
   final bool? sinDiasAsignados;
   final int? promedioDiarioRestante;
 
-  // Solo mensual
+
   final int? semanasRestantes;
   final int? promedioSemanalRestante;
 
