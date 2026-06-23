@@ -4,7 +4,8 @@ class Actividad {
   final String nombre;
   final String color;
   final List<int> dias;
-  final List<int> meses;
+  final int? cantidadDiasSemana;
+  final DateTime? fechaFin;
   final int? objetivoDiario;
   final int? objetivoSemanal;
   final int? objetivoMensual;
@@ -17,7 +18,8 @@ class Actividad {
     required this.nombre,
     required this.color,
     this.dias = const [],
-    this.meses = const [],
+    this.cantidadDiasSemana,
+    this.fechaFin,
     this.objetivoDiario,
     this.objetivoSemanal,
     this.objetivoMensual,
@@ -34,7 +36,10 @@ class Actividad {
       nombre: json['nombre'] as String,
       color: json['color'] as String,
       dias: _listaInt(json['dias']),
-      meses: _listaInt(json['meses']),
+      cantidadDiasSemana: json['cantidad_dias_semana'] as int?,
+      fechaFin: json['fecha_fin'] == null
+          ? null
+          : DateTime.parse(json['fecha_fin'] as String),
       objetivoDiario: json['objetivo_diario'] as int?,
       objetivoSemanal: json['objetivo_semanal'] as int?,
       objetivoMensual: json['objetivo_mensual'] as int?,
@@ -51,7 +56,8 @@ class Actividad {
       'nombre': nombre,
       'color': color,
       'dias': dias,
-      'meses': meses,
+      'cantidad_dias_semana': cantidadDiasSemana,
+      'fecha_fin': _fechaAIso(fechaFin),
       'objetivo_diario': objetivoDiario,
       'objetivo_semanal': objetivoSemanal,
       'objetivo_mensual': objetivoMensual,
@@ -65,7 +71,8 @@ class Actividad {
     String? nombre,
     String? color,
     List<int>? dias,
-    List<int>? meses,
+    int? cantidadDiasSemana,
+    DateTime? fechaFin,
     int? objetivoDiario,
     int? objetivoSemanal,
     int? objetivoMensual,
@@ -77,7 +84,8 @@ class Actividad {
       nombre: nombre ?? this.nombre,
       color: color ?? this.color,
       dias: dias ?? this.dias,
-      meses: meses ?? this.meses,
+      cantidadDiasSemana: cantidadDiasSemana ?? this.cantidadDiasSemana,
+      fechaFin: fechaFin ?? this.fechaFin,
       objetivoDiario: objetivoDiario ?? this.objetivoDiario,
       objetivoSemanal: objetivoSemanal ?? this.objetivoSemanal,
       objetivoMensual: objetivoMensual ?? this.objetivoMensual,
@@ -89,5 +97,13 @@ class Actividad {
   static List<int> _listaInt(dynamic valor) {
     if (valor == null) return const [];
     return (valor as List).map((e) => e as int).toList();
+  }
+
+  static String? _fechaAIso(DateTime? fecha) {
+    if (fecha == null) return null;
+    final y = fecha.year.toString().padLeft(4, '0');
+    final m = fecha.month.toString().padLeft(2, '0');
+    final d = fecha.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
   }
 }

@@ -19,20 +19,46 @@ class CronometroPage extends ConsumerStatefulWidget {
 class _CronometroPageState extends ConsumerState<CronometroPage> {
   Actividad? _seleccionada;
 
+  Future<void> _iniciar(Actividad actividad) async {
+    try {
+      await ref.read(sesionActivaProvider.notifier).iniciar(actividad);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('No se pudo iniciar: $e')));
+      }
+    }
+  }
+
+  Future<void> _pausar() async {
+    try {
+      await ref.read(sesionActivaProvider.notifier).pausar();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('No se pudo pausar: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final estado = ref.watch(sesionActivaProvider);
     final actividades = ref.watch(actividadesProvider);
 
     final actividad = estado.hayActiva ? estado.actividad : _seleccionada;
+    final corriendo = estado.hayActiva;
 
     return actividades.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: Colores.acento),
-      ),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: Colores.acento)),
       error: (e, _) => Center(
-        child: Text('Error: $e',
-            style: const TextStyle(color: Colores.textoSecundario)),
+        child: Text(
+          'Error: $e',
+          style: const TextStyle(color: Colores.textoSecundario),
+        ),
       ),
       data: (lista) {
         if (lista.isEmpty) {
@@ -53,10 +79,9 @@ class _CronometroPageState extends ConsumerState<CronometroPage> {
             _SelectorActividades(
               actividades: lista,
               seleccionadaId: actividad?.id,
-              corriendo: estado.hayActiva,
               alElegir: (a) {
-                if (estado.hayActiva) {
-                  ref.read(sesionActivaProvider.notifier).iniciar(a);
+                if (corriendo && estado.actividad?.id != a.id) {
+                  _pausar();
                 }
                 setState(() => _seleccionada = a);
               },
@@ -64,19 +89,20 @@ class _CronometroPageState extends ConsumerState<CronometroPage> {
             Expanded(
               child: actividad == null
                   ? const _SinSeleccion()
-                  : _Reloj(actividad: actividad, estado: estado),
+                  : _Reloj(
+                      actividad: actividad,
+                      estado: estado,
+                      alTocar: () =>
+                          corriendo ? _pausar() : _iniciar(actividad),
+                    ),
             ),
-            _Controles(
-              actividad: actividad,
-              estado: estado,
-              alPlay: actividad == null
+            _BotonCircular(
+              corriendo: corriendo,
+              alTocar: actividad == null
                   ? null
-                  : () =>
-                      ref.read(sesionActivaProvider.notifier).iniciar(actividad),
-              alPausar: () =>
-                  ref.read(sesionActivaProvider.notifier).pausar(),
+                  : () => corriendo ? _pausar() : _iniciar(actividad),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 40),
           ],
         );
       },
@@ -87,13 +113,11 @@ class _CronometroPageState extends ConsumerState<CronometroPage> {
 class _SelectorActividades extends StatelessWidget {
   final List<Actividad> actividades;
   final int? seleccionadaId;
-  final bool corriendo;
   final ValueChanged<Actividad> alElegir;
 
   const _SelectorActividades({
     required this.actividades,
     required this.seleccionadaId,
-    required this.corriendo,
     required this.alElegir,
   });
 
@@ -127,8 +151,10 @@ class _SelectorActividades extends StatelessWidget {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration:
-                        BoxDecoration(color: color, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -154,8 +180,13 @@ class _SelectorActividades extends StatelessWidget {
 class _Reloj extends ConsumerWidget {
   final Actividad actividad;
   final SesionActivaEstado estado;
+  final VoidCallback alTocar;
 
-  const _Reloj({required this.actividad, required this.estado});
+  const _Reloj({
+    required this.actividad,
+    required this.estado,
+    required this.alTocar,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -176,8 +207,14 @@ class _Reloj extends ConsumerWidget {
         final progreso = obj > 0 ? acumuladoVivo / obj : 0.0;
         final promedio = m.semanal.promedioDiarioRestante ?? 0;
 
-        return _anillo(color, transcurridos, restanteVivo, promedio,
-            progreso: progreso, sinObjetivo: obj <= 0);
+        return _anillo(
+          color,
+          transcurridos,
+          restanteVivo,
+          promedio,
+          progreso: progreso,
+          sinObjetivo: obj <= 0,
+        );
       },
     );
   }
@@ -194,33 +231,36 @@ class _Reloj extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AnilloProgreso(
-            progreso: progreso,
-            color: color,
-            tamano: 260,
-            grosor: 12,
-            sinObjetivo: sinObjetivo,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  Formato.relojCompleto(transcurridos),
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w300,
-                    color: Colores.textoPrimario,
-                    fontFeatures: [FontFeature.tabularFigures()],
+          GestureDetector(
+            onTap: alTocar,
+            child: AnilloProgreso(
+              progreso: progreso,
+              color: color,
+              tamano: 260,
+              grosor: 12,
+              sinObjetivo: sinObjetivo,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    Formato.relojCompleto(transcurridos),
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w300,
+                      color: Colores.textoPrimario,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  actividad.nombre,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Colores.textoSecundario,
+                  const SizedBox(height: 4),
+                  Text(
+                    actividad.nombre,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colores.textoSecundario,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -230,9 +270,7 @@ class _Reloj extends ConsumerWidget {
               children: [
                 _Stat(
                   etiqueta: 'Faltan hoy',
-                  valor: restante == null
-                      ? '—'
-                      : Formato.compacto(restante),
+                  valor: restante == null ? '—' : Formato.compacto(restante),
                 ),
                 Container(
                   width: 1,
@@ -286,53 +324,37 @@ class _Stat extends StatelessWidget {
   }
 }
 
-class _Controles extends StatelessWidget {
-  final Actividad? actividad;
-  final SesionActivaEstado estado;
-  final VoidCallback? alPlay;
-  final VoidCallback alPausar;
+class _BotonCircular extends StatelessWidget {
+  final bool corriendo;
+  final VoidCallback? alTocar;
 
-  const _Controles({
-    required this.actividad,
-    required this.estado,
-    required this.alPlay,
-    required this.alPausar,
-  });
+  const _BotonCircular({required this.corriendo, required this.alTocar});
 
   @override
   Widget build(BuildContext context) {
-    final corriendo = estado.hayActiva;
+    final habilitado = alTocar != null;
+    final fondo = !habilitado
+        ? Colores.elevado
+        : (corriendo ? Colores.elevado : Colores.acento);
+    final iconoColor = !habilitado
+        ? Colores.inactivo
+        : (corriendo ? Colores.textoPrimario : Colors.black);
 
-    if (corriendo) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Material(
+      color: fondo,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      elevation: habilitado ? 3 : 0,
+      child: InkWell(
+        onTap: alTocar,
         child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: alPausar,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colores.elevado,
-              foregroundColor: Colores.textoPrimario,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            icon: const Icon(Icons.pause),
-            label: const Text('Pausar'),
+          width: 76,
+          height: 76,
+          child: Icon(
+            corriendo ? Icons.pause : Icons.play_arrow,
+            color: iconoColor,
+            size: 38,
           ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: alPlay,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          icon: const Icon(Icons.play_arrow),
-          label: Text(actividad == null ? 'Elegí una actividad' : 'Iniciar'),
         ),
       ),
     );

@@ -55,15 +55,17 @@ class ActividadesPage extends ConsumerWidget {
             error: (e, _) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('No se pudieron cargar las actividades.\n$e',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colores.textoSecundario)),
+                child: Text(
+                  'No se pudieron cargar las actividades.\n$e',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colores.textoSecundario),
+                ),
               ),
             ),
             data: (lista) {
               if (lista.isEmpty) return const _Vacio();
               final mapaGrupos = {
-                for (final g in grupos.value ?? <Grupo>[]) g.id: g
+                for (final g in grupos.value ?? <Grupo>[]) g.id: g,
               };
               return _ListaAgrupada(
                 actividades: lista,
@@ -87,7 +89,10 @@ class ActividadesPage extends ConsumerWidget {
   }
 
   Future<void> _confirmarEliminar(
-      BuildContext context, WidgetRef ref, Actividad a) async {
+    BuildContext context,
+    WidgetRef ref,
+    Actividad a,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -114,9 +119,9 @@ class ActividadesPage extends ConsumerWidget {
         await ref.read(actividadesProvider.notifier).eliminar(a.id);
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No se pudo eliminar: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('No se pudo eliminar: $e')));
         }
       }
     }
@@ -166,11 +171,13 @@ class _ListaAgrupada extends StatelessWidget {
               ),
             ),
           ),
-          ...porGrupo[clave]!.map((a) => _FilaActividad(
-                actividad: a,
-                alEditar: () => alEditar(a),
-                alEliminar: () => alEliminar(a),
-              )),
+          ...porGrupo[clave]!.map(
+            (a) => _FilaActividad(
+              actividad: a,
+              alEditar: () => alEditar(a),
+              alEliminar: () => alEliminar(a),
+            ),
+          ),
         ],
       ],
     );
@@ -193,39 +200,44 @@ class _FilaActividad extends StatelessWidget {
     final color = ColoresActividad.desdeHex(actividad.color);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
+      child: Material(
         color: Colores.card,
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: ListTile(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        leading: Container(
-          width: 14,
-          height: 14,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        title: Text(
-          actividad.nombre,
-          style: const TextStyle(
-            color: Colores.textoPrimario,
-            fontWeight: FontWeight.w600,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
+          leading: Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          title: Text(
+            actividad.nombre,
+            style: const TextStyle(
+              color: Colores.textoPrimario,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          subtitle: Text(
+            _resumenObjetivos(actividad),
+            style: const TextStyle(
+              color: Colores.textoSecundario,
+              fontSize: 13,
+            ),
+          ),
+          trailing: PopupMenuButton<String>(
+            color: Colores.elevado,
+            icon: const Icon(Icons.more_vert, color: Colores.textoSecundario),
+            onSelected: (v) => v == 'editar' ? alEditar() : alEliminar(),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'editar', child: Text('Editar')),
+              PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
+            ],
+          ),
+          onTap: alEditar,
         ),
-        subtitle: Text(
-          _resumenObjetivos(actividad),
-          style: const TextStyle(color: Colores.textoSecundario, fontSize: 13),
-        ),
-        trailing: PopupMenuButton<String>(
-          color: Colores.elevado,
-          icon: const Icon(Icons.more_vert, color: Colores.textoSecundario),
-          onSelected: (v) => v == 'editar' ? alEditar() : alEliminar(),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'editar', child: Text('Editar')),
-            PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
-          ],
-        ),
-        onTap: alEditar,
       ),
     );
   }

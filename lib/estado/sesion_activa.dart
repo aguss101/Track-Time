@@ -37,7 +37,8 @@ class SesionActivaEstado {
 
 final sesionActivaProvider =
     NotifierProvider<SesionActivaNotifier, SesionActivaEstado>(
-        SesionActivaNotifier.new);
+      SesionActivaNotifier.new,
+    );
 
 class SesionActivaNotifier extends Notifier<SesionActivaEstado> {
   Timer? _timer;
@@ -53,7 +54,12 @@ class SesionActivaNotifier extends Notifier<SesionActivaEstado> {
     final db = ref.read(supabaseProvider);
     await db.iniciarSesion(actividad.id);
     final sesion = await db.sesionActiva();
-    if (sesion == null) return;
+    if (sesion == null) {
+      throw StateError(
+        'La sesión se inició pero no aparece en la base de datos. '
+        'Revisá las policies RLS de la tabla sesiones.',
+      );
+    }
 
     state = SesionActivaEstado(
       sesion: sesion,

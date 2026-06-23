@@ -7,6 +7,7 @@ import '../../componentes/selector_color.dart';
 import '../../estado/proveedores.dart';
 import '../../modelos/actividad.dart';
 import '../../modelos/grupo.dart';
+import '../../util/objetivos.dart';
 
 class FormularioActividad extends ConsumerStatefulWidget {
   final Actividad? actividad;
@@ -24,20 +25,18 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
   late String _colorHex;
   int? _idGrupo;
   late Set<int> _dias;
-  late Set<int> _meses;
+  int? _cantidadDiasSemana;
+  DateTime? _fechaFin;
 
   int? _objDiario;
   int? _objSemanal;
   int? _objMensual;
   int? _objAnual;
 
+  bool _calcularObjetivos = false;
   bool _guardando = false;
 
   static const _diasLabel = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-  static const _mesesLabel = [
-    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-  ];
 
   bool get _esEdicion => widget.actividad != null;
 
@@ -49,7 +48,8 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
     _colorHex = a?.color ?? ColoresActividad.aHex(ColoresActividad.todos.first);
     _idGrupo = a?.idGrupo;
     _dias = {...?a?.dias};
-    _meses = {...?a?.meses};
+    _cantidadDiasSemana = a?.cantidadDiasSemana;
+    _fechaFin = a?.fechaFin;
     _objDiario = a?.objetivoDiario;
     _objSemanal = a?.objetivoSemanal;
     _objMensual = a?.objetivoMensual;
@@ -62,9 +62,54 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
     super.dispose();
   }
 
+  Future<void> _elegirFecha() async {
+    final hoy = DateTime.now();
+    final elegida = await showDatePicker(
+      context: context,
+      initialDate: _fechaFin ?? hoy,
+      firstDate: DateTime(hoy.year - 1),
+      lastDate: DateTime(hoy.year + 20),
+      helpText: 'Fecha estimada de finalización',
+      cancelText: 'Cancelar',
+      confirmText: 'Listo',
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: Colores.acento,
+            onPrimary: Colors.black,
+            surface: Colores.card,
+            onSurface: Colores.textoPrimario,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (elegida != null) setState(() => _fechaFin = elegida);
+  }
+
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _guardando = true);
+
+    var objDiario = _objDiario;
+    var objSemanal = _objSemanal;
+    var objMensual = _objMensual;
+    var objAnual = _objAnual;
+
+    if (_calcularObjetivos) {
+      final calc = CalculoObjetivos.completar(
+        diario: objDiario,
+        semanal: objSemanal,
+        mensual: objMensual,
+        anual: objAnual,
+        cantidadDiasSemana: _cantidadDiasSemana,
+        diasSeleccionados: _dias.length,
+      );
+      objDiario = calc.diario;
+      objSemanal = calc.semanal;
+      objMensual = calc.mensual;
+      objAnual = calc.anual;
+    }
 
     final base = Actividad(
       id: widget.actividad?.id ?? 0,
@@ -72,11 +117,12 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
       nombre: _nombre.text.trim(),
       color: _colorHex,
       dias: (_dias.toList()..sort()),
-      meses: (_meses.toList()..sort()),
-      objetivoDiario: _objDiario,
-      objetivoSemanal: _objSemanal,
-      objetivoMensual: _objMensual,
-      objetivoAnual: _objAnual,
+      cantidadDiasSemana: _cantidadDiasSemana,
+      fechaFin: _fechaFin,
+      objetivoDiario: objDiario,
+      objetivoSemanal: objSemanal,
+      objetivoMensual: objMensual,
+      objetivoAnual: objAnual,
     );
 
     try {
@@ -140,7 +186,7 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
             ),
             const SizedBox(height: 24),
 
-            _Seccion('Días (opcional)'),
+            _Seccion('Días de la semana (opcional)'),
             Wrap(
               spacing: 8,
               children: List.generate(7, (i) {
@@ -149,27 +195,25 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
                 return _Chip(
                   texto: _diasLabel[i],
                   activo: activo,
-                  alTocar: () => setState(() =>
-                      activo ? _dias.remove(dia) : _dias.add(dia)),
+                  alTocar: () => setState(
+                      () => activo ? _dias.remove(dia) : _dias.add(dia)),
                 );
               }),
             ),
             const SizedBox(height: 24),
 
-            _Seccion('Meses (opcional)'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: List.generate(12, (i) {
-                final mes = i + 1;
-                final activo = _meses.contains(mes);
-                return _Chip(
-                  texto: _mesesLabel[i],
-                  activo: activo,
-                  alTocar: () => setState(() =>
-                      activo ? _meses.remove(mes) : _meses.add(mes)),
-                );
-              }),
+            _Seccion('Cantidad de días por semana (opcional)'),
+            _CampoCantidadDias(
+              valor: _cantidadDiasSemana,
+              alCambiar: (v) => setState(() => _cantidadDiasSemana = v),
+            ),
+            const SizedBox(height: 24),
+
+            _Seccion('Fecha estimada de finalización (opcional)'),
+            _CampoFecha(
+              fecha: _fechaFin,
+              alTocar: _elegirFecha,
+              alLimpiar: () => setState(() => _fechaFin = null),
             ),
             const SizedBox(height: 24),
 
@@ -194,7 +238,13 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
               segundos: _objAnual,
               alCambiar: (s) => setState(() => _objAnual = s),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 8),
+
+            _CheckCalculo(
+              valor: _calcularObjetivos,
+              alCambiar: (v) => setState(() => _calcularObjetivos = v),
+            ),
+            const SizedBox(height: 24),
 
             ElevatedButton(
               onPressed: _guardando ? null : _guardar,
@@ -264,6 +314,161 @@ class _Chip extends StatelessWidget {
             fontWeight: activo ? FontWeight.w600 : FontWeight.w400,
             fontSize: 13,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CampoCantidadDias extends StatefulWidget {
+  final int? valor;
+  final ValueChanged<int?> alCambiar;
+
+  const _CampoCantidadDias({required this.valor, required this.alCambiar});
+
+  @override
+  State<_CampoCantidadDias> createState() => _CampoCantidadDiasState();
+}
+
+class _CampoCantidadDiasState extends State<_CampoCantidadDias> {
+  late final TextEditingController _controlador;
+
+  @override
+  void initState() {
+    super.initState();
+    _controlador =
+        TextEditingController(text: widget.valor == null ? '' : '${widget.valor}');
+  }
+
+  @override
+  void dispose() {
+    _controlador.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 160,
+      child: TextField(
+        controller: _controlador,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: const TextStyle(color: Colores.textoPrimario),
+        onChanged: (texto) {
+          var n = int.tryParse(texto);
+          if (n != null && n > 7) {
+            n = 7;
+            _controlador.text = '7';
+            _controlador.selection =
+                const TextSelection.collapsed(offset: 1);
+          }
+          widget.alCambiar(n == null || n <= 0 ? null : n);
+        },
+        decoration: const InputDecoration(
+          isDense: true,
+          hintText: '1 a 7',
+          suffixText: 'días',
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        ),
+      ),
+    );
+  }
+}
+
+class _CampoFecha extends StatelessWidget {
+  final DateTime? fecha;
+  final VoidCallback alTocar;
+  final VoidCallback alLimpiar;
+
+  const _CampoFecha({
+    required this.fecha,
+    required this.alTocar,
+    required this.alLimpiar,
+  });
+
+  String _formato(DateTime f) {
+    final d = f.day.toString().padLeft(2, '0');
+    final m = f.month.toString().padLeft(2, '0');
+    return '$d/$m/${f.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: alTocar,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colores.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colores.borde),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_outlined,
+                size: 18, color: Colores.textoSecundario),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                fecha == null ? 'Sin fecha' : _formato(fecha!),
+                style: TextStyle(
+                  color: fecha == null
+                      ? Colores.textoSecundario
+                      : Colores.textoPrimario,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            if (fecha != null)
+              GestureDetector(
+                onTap: alLimpiar,
+                child: const Icon(Icons.close,
+                    size: 18, color: Colores.textoSecundario),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckCalculo extends StatelessWidget {
+  final bool valor;
+  final ValueChanged<bool> alCambiar;
+
+  const _CheckCalculo({required this.valor, required this.alCambiar});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => alCambiar(!valor),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: valor,
+                onChanged: (v) => alCambiar(v ?? false),
+                activeColor: Colores.acento,
+                checkColor: Colors.black,
+                side: const BorderSide(color: Colores.textoSecundario),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                '¿Deseás que calculemos todos los objetivos no completados?',
+                style: TextStyle(color: Colores.textoPrimario, fontSize: 14),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -367,8 +572,7 @@ class _CampoObjetivoState extends State<_CampoObjetivo> {
             width: 90,
             child: Text(
               widget.etiqueta,
-              style: const TextStyle(
-                  color: Colores.textoPrimario, fontSize: 15),
+              style: const TextStyle(color: Colores.textoPrimario, fontSize: 15),
             ),
           ),
           Expanded(child: _num(_horas, 'h')),

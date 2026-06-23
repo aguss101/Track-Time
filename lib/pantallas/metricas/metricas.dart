@@ -47,16 +47,17 @@ class _MetricasPageState extends ConsumerState<MetricasPage> {
             );
           }
 
-          final seleccionada = _actividadId ?? lista.first.id;
-          final actividad = lista.firstWhere((a) => a.id == seleccionada,
-              orElse: () => lista.first);
+          final actividad = _actividadId == null
+              ? null
+              : lista.firstWhere((a) => a.id == _actividadId,
+                  orElse: () => lista.first);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SelectorActividad(
                 actividades: lista,
-                seleccionadaId: seleccionada,
+                seleccionadaId: _actividadId,
                 alElegir: (id) => setState(() => _actividadId = id),
               ),
               _SelectorPeriodo(
@@ -76,8 +77,8 @@ class _MetricasPageState extends ConsumerState<MetricasPage> {
 
 class _SelectorActividad extends StatelessWidget {
   final List<Actividad> actividades;
-  final int seleccionadaId;
-  final ValueChanged<int> alElegir;
+  final int? seleccionadaId;
+  final ValueChanged<int?> alElegir;
 
   const _SelectorActividad({
     required this.actividades,
@@ -92,47 +93,74 @@ class _SelectorActividad extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        itemCount: actividades.length,
+        itemCount: actividades.length + 1,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
-          final a = actividades[i];
-          final color = ColoresActividad.desdeHex(a.color);
-          final activo = a.id == seleccionadaId;
-          return GestureDetector(
-            onTap: () => alElegir(a.id),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: activo ? Colores.elevado : Colores.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: activo ? color : Colores.borde,
-                    width: activo ? 2 : 1),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration:
-                        BoxDecoration(color: color, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    a.nombre,
-                    style: TextStyle(
-                      color: activo
-                          ? Colores.textoPrimario
-                          : Colores.textoSecundario,
-                      fontWeight: activo ? FontWeight.w600 : FontWeight.w400,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          if (i == 0) {
+            return _Pildora(
+              etiqueta: 'Todas',
+              color: Colores.acento,
+              activo: seleccionadaId == null,
+              alTocar: () => alElegir(null),
+            );
+          }
+          final a = actividades[i - 1];
+          return _Pildora(
+            etiqueta: a.nombre,
+            color: ColoresActividad.desdeHex(a.color),
+            activo: a.id == seleccionadaId,
+            alTocar: () => alElegir(a.id),
           );
         },
+      ),
+    );
+  }
+}
+
+class _Pildora extends StatelessWidget {
+  final String etiqueta;
+  final Color color;
+  final bool activo;
+  final VoidCallback alTocar;
+
+  const _Pildora({
+    required this.etiqueta,
+    required this.color,
+    required this.activo,
+    required this.alTocar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: alTocar,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: activo ? Colores.elevado : Colores.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: activo ? color : Colores.borde, width: activo ? 2 : 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              etiqueta,
+              style: TextStyle(
+                color:
+                    activo ? Colores.textoPrimario : Colores.textoSecundario,
+                fontWeight: activo ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -191,14 +219,18 @@ class _SelectorPeriodo extends StatelessWidget {
 }
 
 class _Contenido extends ConsumerWidget {
-  final Actividad actividad;
+  final Actividad? actividad;
   final Periodo periodo;
 
   const _Contenido({required this.actividad, required this.periodo});
 
+  bool get _esGlobal => actividad == null;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final metricas = ref.watch(metricasProvider(actividad.id));
+    final metricas = _esGlobal
+        ? ref.watch(metricasGlobalProvider)
+        : ref.watch(metricasProvider(actividad!.id));
 
     return metricas.when(
       loading: () => const Center(
@@ -222,7 +254,9 @@ class _Contenido extends ConsumerWidget {
         return RefreshIndicator(
           color: Colores.acento,
           backgroundColor: Colores.card,
-          onRefresh: () async => ref.invalidate(metricasProvider(actividad.id)),
+          onRefresh: () async => _esGlobal
+              ? ref.invalidate(metricasGlobalProvider)
+              : ref.invalidate(metricasProvider(actividad!.id)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: _tarjetas(metrica),
@@ -233,7 +267,9 @@ class _Contenido extends ConsumerWidget {
   }
 
   List<Widget> _tarjetas(Metrica m) {
-    final color = ColoresActividad.desdeHex(actividad.color);
+    final color = _esGlobal
+        ? Colores.acento
+        : ColoresActividad.desdeHex(actividad!.color);
     final widgets = <Widget>[
       Row(
         children: [
@@ -266,8 +302,7 @@ class _Contenido extends ConsumerWidget {
       widgets.add(const SizedBox(height: 12));
     }
 
-    // Extras por período.
-    if (periodo == Periodo.semanal) {
+    if (!_esGlobal && periodo == Periodo.semanal) {
       if (m.sinDiasAsignados == true) {
         widgets.add(const _Aviso(
           texto:
@@ -293,7 +328,7 @@ class _Contenido extends ConsumerWidget {
           ),
         ],
       ));
-    } else if (periodo == Periodo.mensual) {
+    } else if (!_esGlobal && periodo == Periodo.mensual) {
       widgets.add(Row(
         children: [
           Expanded(

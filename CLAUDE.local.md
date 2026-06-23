@@ -14,3 +14,6 @@
 - Branch de trabajo: `dev--`
 - Merge a `main` cuando la feature esté lista y probada en dispositivo
 - Solo un desarrollador en el proyecto (Agustin)
+
+## Aviso al terminar tareas
+Cada vez que termines de ejecutar una tarea, ejecutá el comando `curl -s -d 'Claudio acabó' ntfy.sh/claude_respuesta > NUL`. Asegurate de redirigir la salida a NUL para que no se genere ningún archivo adjunto.

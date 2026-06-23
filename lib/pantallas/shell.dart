@@ -15,12 +15,23 @@ class Shell extends ConsumerStatefulWidget {
 }
 
 class _ShellState extends ConsumerState<Shell> {
+  final _controlador = PageController();
   int _indice = 0;
 
-  void _ir(int i) => setState(() => _indice = i);
+  @override
+  void dispose() {
+    _controlador.dispose();
+    super.dispose();
+  }
+
+  void _ir(int i) {
+    _controlador.jumpToPage(i);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final enCronometro = _indice == 1;
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -28,8 +39,9 @@ class _ShellState extends ConsumerState<Shell> {
           children: [
             BarraSesionActiva(alTocar: () => _ir(1)),
             Expanded(
-              child: IndexedStack(
-                index: _indice,
+              child: PageView(
+                controller: _controlador,
+                onPageChanged: (i) => setState(() => _indice = i),
                 children: const [
                   InicioPage(),
                   CronometroPage(),
@@ -40,10 +52,9 @@ class _ShellState extends ConsumerState<Shell> {
           ],
         ),
       ),
-      floatingActionButton: _BotonCronometro(
-        activo: _indice == 1,
-        alTocar: () => _ir(1),
-      ),
+      floatingActionButton: enCronometro
+          ? null
+          : _BotonCronometro(alTocar: () => _ir(1)),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _BarraNav(indice: _indice, alElegir: _ir),
     );
@@ -51,10 +62,9 @@ class _ShellState extends ConsumerState<Shell> {
 }
 
 class _BotonCronometro extends StatelessWidget {
-  final bool activo;
   final VoidCallback alTocar;
 
-  const _BotonCronometro({required this.activo, required this.alTocar});
+  const _BotonCronometro({required this.alTocar});
 
   @override
   Widget build(BuildContext context) {
@@ -63,8 +73,8 @@ class _BotonCronometro extends StatelessWidget {
       width: 60,
       child: FloatingActionButton(
         onPressed: alTocar,
-        backgroundColor: activo ? Colores.acento : Colores.elevado,
-        foregroundColor: activo ? Colors.black : Colores.textoPrimario,
+        backgroundColor: Colores.elevado,
+        foregroundColor: Colores.textoPrimario,
         elevation: 2,
         shape: const CircleBorder(),
         child: const Icon(Icons.timer_outlined, size: 28),
@@ -81,14 +91,15 @@ class _BarraNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enCronometro = indice == 1;
+
     return BottomAppBar(
       color: Colores.card,
-      shape: const CircularNotchedRectangle(),
+      shape: enCronometro ? null : const CircularNotchedRectangle(),
       notchMargin: 8,
       height: 64,
       padding: EdgeInsets.zero,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _ItemNav(
             icono: Icons.home_outlined,
@@ -97,7 +108,20 @@ class _BarraNav extends StatelessWidget {
             activo: indice == 0,
             alTocar: () => alElegir(0),
           ),
-          const SizedBox(width: 60),
+          SizedBox(
+            width: 72,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              transitionBuilder: (child, animacion) =>
+                  FadeTransition(opacity: animacion, child: child),
+              child: enCronometro
+                  ? _MiniCronometro(
+                      key: const ValueKey('crono'),
+                      alTocar: () => alElegir(1),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('vacio')),
+            ),
+          ),
           _ItemNav(
             icono: Icons.list_alt_outlined,
             iconoActivo: Icons.list_alt,
