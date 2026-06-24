@@ -135,6 +135,34 @@ class _BarraNav extends StatelessWidget {
   }
 }
 
+class _MiniCronometro extends StatelessWidget {
+  final VoidCallback alTocar;
+
+  const _MiniCronometro({super.key, required this.alTocar});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: alTocar,
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.timer, color: Colores.acento, size: 24),
+          SizedBox(height: 2),
+          Text(
+            'Cronómetro',
+            style: TextStyle(
+              color: Colores.acento,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ItemNav extends StatelessWidget {
   final IconData icono;
   final IconData iconoActivo;

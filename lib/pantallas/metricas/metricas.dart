@@ -30,8 +30,10 @@ class _MetricasPageState extends ConsumerState<MetricasPage> {
           child: CircularProgressIndicator(color: Colores.acento),
         ),
         error: (e, _) => Center(
-          child: Text('Error: $e',
-              style: const TextStyle(color: Colores.textoSecundario)),
+          child: Text(
+            'Error: $e',
+            style: const TextStyle(color: Colores.textoSecundario),
+          ),
         ),
         data: (lista) {
           if (lista.isEmpty) {
@@ -41,7 +43,10 @@ class _MetricasPageState extends ConsumerState<MetricasPage> {
                 child: Text(
                   'Creá actividades para ver métricas.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colores.textoSecundario, fontSize: 15),
+                  style: TextStyle(
+                    color: Colores.textoSecundario,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             );
@@ -49,8 +54,10 @@ class _MetricasPageState extends ConsumerState<MetricasPage> {
 
           final actividad = _actividadId == null
               ? null
-              : lista.firstWhere((a) => a.id == _actividadId,
-                  orElse: () => lista.first);
+              : lista.firstWhere(
+                  (a) => a.id == _actividadId,
+                  orElse: () => lista.first,
+                );
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,7 +147,9 @@ class _Pildora extends StatelessWidget {
           color: activo ? Colores.elevado : Colores.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: activo ? color : Colores.borde, width: activo ? 2 : 1),
+            color: activo ? color : Colores.borde,
+            width: activo ? 2 : 1,
+          ),
         ),
         child: Row(
           children: [
@@ -153,8 +162,7 @@ class _Pildora extends StatelessWidget {
             Text(
               etiqueta,
               style: TextStyle(
-                color:
-                    activo ? Colores.textoPrimario : Colores.textoSecundario,
+                color: activo ? Colores.textoPrimario : Colores.textoSecundario,
                 fontWeight: activo ? FontWeight.w600 : FontWeight.w400,
                 fontSize: 14,
               ),
@@ -233,15 +241,16 @@ class _Contenido extends ConsumerWidget {
         : ref.watch(metricasProvider(actividad!.id));
 
     return metricas.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: Colores.acento),
-      ),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: Colores.acento)),
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('No se pudo cargar la métrica.\n$e',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colores.textoSecundario)),
+          child: Text(
+            'No se pudo cargar la métrica.\n$e',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colores.textoSecundario),
+          ),
         ),
       ),
       data: (m) {
@@ -294,58 +303,66 @@ class _Contenido extends ConsumerWidget {
     ];
 
     if (m.excedente > 0) {
-      widgets.add(_Tarjeta(
-        etiqueta: 'Excedente',
-        valor: '+${Formato.compacto(m.excedente)}',
-        color: Colores.acento,
-      ));
+      widgets.add(
+        _Tarjeta(
+          etiqueta: 'Excedente',
+          valor: '+${Formato.compacto(m.excedente)}',
+          color: Colores.acento,
+        ),
+      );
       widgets.add(const SizedBox(height: 12));
     }
 
     if (!_esGlobal && periodo == Periodo.semanal) {
       if (m.sinDiasAsignados == true) {
-        widgets.add(const _Aviso(
-          texto:
-              'Esta actividad no tiene días asignados. El promedio semanal se '
-              'reparte entre hoy y el domingo hasta que asignes días.',
-        ));
+        widgets.add(
+          const _Aviso(
+            texto:
+                'Esta actividad no tiene días asignados. El promedio semanal se '
+                'reparte entre hoy y el domingo hasta que asignes días.',
+          ),
+        );
         widgets.add(const SizedBox(height: 12));
       }
-      widgets.add(Row(
-        children: [
-          Expanded(
-            child: _Tarjeta(
-              etiqueta: 'Días restantes',
-              valor: '${m.diasRestantes ?? 0}',
+      widgets.add(
+        Row(
+          children: [
+            Expanded(
+              child: _Tarjeta(
+                etiqueta: 'Días restantes',
+                valor: '${m.diasRestantes ?? 0}',
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _Tarjeta(
-              etiqueta: 'Promedio/día',
-              valor: Formato.compacto(m.promedioDiarioRestante ?? 0),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _Tarjeta(
+                etiqueta: 'Promedio/día',
+                valor: Formato.compacto(m.promedioDiarioRestante ?? 0),
+              ),
             ),
-          ),
-        ],
-      ));
+          ],
+        ),
+      );
     } else if (!_esGlobal && periodo == Periodo.mensual) {
-      widgets.add(Row(
-        children: [
-          Expanded(
-            child: _Tarjeta(
-              etiqueta: 'Semanas restantes',
-              valor: '${m.semanasRestantes ?? 0}',
+      widgets.add(
+        Row(
+          children: [
+            Expanded(
+              child: _Tarjeta(
+                etiqueta: 'Semanas restantes',
+                valor: '${m.semanasRestantes ?? 0}',
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _Tarjeta(
-              etiqueta: 'Promedio/semana',
-              valor: Formato.compacto(m.promedioSemanalRestante ?? 0),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _Tarjeta(
+                etiqueta: 'Promedio/semana',
+                valor: Formato.compacto(m.promedioSemanalRestante ?? 0),
+              ),
             ),
-          ),
-        ],
-      ));
+          ],
+        ),
+      );
     }
 
     return widgets;
@@ -382,7 +399,10 @@ class _Tarjeta extends StatelessWidget {
         children: [
           Text(
             etiqueta,
-            style: const TextStyle(color: Colores.textoSecundario, fontSize: 13),
+            style: const TextStyle(
+              color: Colores.textoSecundario,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -410,20 +430,27 @@ class _Aviso extends StatelessWidget {
       decoration: BoxDecoration(
         color: ColoresActividad.amarillo.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: ColoresActividad.amarillo.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: ColoresActividad.amarillo.withValues(alpha: 0.4),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline,
-              color: ColoresActividad.amarillo, size: 20),
+          const Icon(
+            Icons.info_outline,
+            color: ColoresActividad.amarillo,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               texto,
               style: const TextStyle(
-                  color: Colores.textoPrimario, fontSize: 13, height: 1.4),
+                color: Colores.textoPrimario,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
           ),
         ],

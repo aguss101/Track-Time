@@ -33,8 +33,7 @@ class InicioPage extends ConsumerWidget {
               return RefreshIndicator(
                 color: Colores.acento,
                 backgroundColor: Colores.card,
-                onRefresh: () =>
-                    ref.read(resumenProvider.notifier).refrescar(),
+                onRefresh: () => ref.read(resumenProvider.notifier).refrescar(),
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                   itemCount: lista.length,
@@ -61,9 +60,9 @@ class _Encabezado extends StatelessWidget {
             icon: const Icon(Icons.bar_chart_rounded),
             color: Colores.textoPrimario,
             tooltip: 'Métricas',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MetricasPage()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const MetricasPage())),
           ),
           const Spacer(),
           const Text(
@@ -118,8 +117,10 @@ class _CardActividad extends StatelessWidget {
                     Container(
                       width: 10,
                       height: 10,
-                      decoration:
-                          BoxDecoration(color: color, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -233,8 +234,10 @@ class _Error extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(color: Colores.textoSecundario, fontSize: 12),
+              style: const TextStyle(
+                color: Colores.textoSecundario,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(

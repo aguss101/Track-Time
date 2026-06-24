@@ -52,7 +52,9 @@ class Supabase {
       body: jsonEncode(grupo.toJson()),
     );
     _verificar(r, 'crearGrupo');
-    return Grupo.fromJson((jsonDecode(r.body) as List).first as Map<String, dynamic>);
+    return Grupo.fromJson(
+      (jsonDecode(r.body) as List).first as Map<String, dynamic>,
+    );
   }
 
   Future<Grupo> actualizarGrupo(Grupo grupo) async {
@@ -62,7 +64,9 @@ class Supabase {
       body: jsonEncode(grupo.toJson()),
     );
     _verificar(r, 'actualizarGrupo');
-    return Grupo.fromJson((jsonDecode(r.body) as List).first as Map<String, dynamic>);
+    return Grupo.fromJson(
+      (jsonDecode(r.body) as List).first as Map<String, dynamic>,
+    );
   }
 
   Future<void> eliminarGrupo(int id) async {
@@ -97,7 +101,8 @@ class Supabase {
     );
     _verificar(r, 'crearActividad');
     return Actividad.fromJson(
-        (jsonDecode(r.body) as List).first as Map<String, dynamic>);
+      (jsonDecode(r.body) as List).first as Map<String, dynamic>,
+    );
   }
 
   Future<Actividad> actualizarActividad(Actividad actividad) async {
@@ -108,7 +113,8 @@ class Supabase {
     );
     _verificar(r, 'actualizarActividad');
     return Actividad.fromJson(
-        (jsonDecode(r.body) as List).first as Map<String, dynamic>);
+      (jsonDecode(r.body) as List).first as Map<String, dynamic>,
+    );
   }
 
   Future<void> eliminarActividad(int id) async {
@@ -143,7 +149,8 @@ class Supabase {
     );
     _verificar(r, 'pausarSesion');
     return Sesion.fromJson(
-        (jsonDecode(r.body) as List).first as Map<String, dynamic>);
+      (jsonDecode(r.body) as List).first as Map<String, dynamic>,
+    );
   }
 
   // ════════════════════════════════════════════════════

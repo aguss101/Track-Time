@@ -136,9 +136,9 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
     } catch (e) {
       if (mounted) {
         setState(() => _guardando = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('No se pudo guardar: $e')));
       }
     }
   }
@@ -175,9 +175,12 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
 
             _Seccion('Grupo'),
             grupos.when(
-              loading: () => const LinearProgressIndicator(color: Colores.acento),
-              error: (_, _) => const Text('No se pudieron cargar los grupos',
-                  style: TextStyle(color: Colores.textoSecundario)),
+              loading: () =>
+                  const LinearProgressIndicator(color: Colores.acento),
+              error: (_, _) => const Text(
+                'No se pudieron cargar los grupos',
+                style: TextStyle(color: Colores.textoSecundario),
+              ),
               data: (lista) => _DropdownGrupo(
                 grupos: lista,
                 seleccionado: _idGrupo,
@@ -196,7 +199,8 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
                   texto: _diasLabel[i],
                   activo: activo,
                   alTocar: () => setState(
-                      () => activo ? _dias.remove(dia) : _dias.add(dia)),
+                    () => activo ? _dias.remove(dia) : _dias.add(dia),
+                  ),
                 );
               }),
             ),
@@ -253,7 +257,9 @@ class _FormularioActividadState extends ConsumerState<FormularioActividad> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.black),
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
                     )
                   : Text(_esEdicion ? 'Guardar cambios' : 'Crear actividad'),
             ),
@@ -336,8 +342,9 @@ class _CampoCantidadDiasState extends State<_CampoCantidadDias> {
   @override
   void initState() {
     super.initState();
-    _controlador =
-        TextEditingController(text: widget.valor == null ? '' : '${widget.valor}');
+    _controlador = TextEditingController(
+      text: widget.valor == null ? '' : '${widget.valor}',
+    );
   }
 
   @override
@@ -360,8 +367,7 @@ class _CampoCantidadDiasState extends State<_CampoCantidadDias> {
           if (n != null && n > 7) {
             n = 7;
             _controlador.text = '7';
-            _controlador.selection =
-                const TextSelection.collapsed(offset: 1);
+            _controlador.selection = const TextSelection.collapsed(offset: 1);
           }
           widget.alCambiar(n == null || n <= 0 ? null : n);
         },
@@ -407,8 +413,11 @@ class _CampoFecha extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined,
-                size: 18, color: Colores.textoSecundario),
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: Colores.textoSecundario,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -424,8 +433,11 @@ class _CampoFecha extends StatelessWidget {
             if (fecha != null)
               GestureDetector(
                 onTap: alLimpiar,
-                child: const Icon(Icons.close,
-                    size: 18, color: Colores.textoSecundario),
+                child: const Icon(
+                  Icons.close,
+                  size: 18,
+                  color: Colores.textoSecundario,
+                ),
               ),
           ],
         ),
@@ -500,18 +512,16 @@ class _DropdownGrupo extends StatelessWidget {
           value: seleccionado,
           isExpanded: true,
           dropdownColor: Colores.card,
-          hint: const Text('Sin grupo',
-              style: TextStyle(color: Colores.textoSecundario)),
+          hint: const Text(
+            'Sin grupo',
+            style: TextStyle(color: Colores.textoSecundario),
+          ),
           style: const TextStyle(color: Colores.textoPrimario, fontSize: 15),
           items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('Sin grupo'),
+            const DropdownMenuItem<int?>(value: null, child: Text('Sin grupo')),
+            ...grupos.map(
+              (g) => DropdownMenuItem<int?>(value: g.id, child: Text(g.nombre)),
             ),
-            ...grupos.map((g) => DropdownMenuItem<int?>(
-                  value: g.id,
-                  child: Text(g.nombre),
-                )),
           ],
           onChanged: alElegir,
         ),
@@ -544,8 +554,9 @@ class _CampoObjetivoState extends State<_CampoObjetivo> {
     super.initState();
     final s = widget.segundos;
     _horas = TextEditingController(text: s == null ? '' : '${s ~/ 3600}');
-    _minutos =
-        TextEditingController(text: s == null ? '' : '${(s % 3600) ~/ 60}');
+    _minutos = TextEditingController(
+      text: s == null ? '' : '${(s % 3600) ~/ 60}',
+    );
   }
 
   @override
@@ -572,7 +583,10 @@ class _CampoObjetivoState extends State<_CampoObjetivo> {
             width: 90,
             child: Text(
               widget.etiqueta,
-              style: const TextStyle(color: Colores.textoPrimario, fontSize: 15),
+              style: const TextStyle(
+                color: Colores.textoPrimario,
+                fontSize: 15,
+              ),
             ),
           ),
           Expanded(child: _num(_horas, 'h')),
@@ -594,8 +608,10 @@ class _CampoObjetivoState extends State<_CampoObjetivo> {
         isDense: true,
         hintText: '0',
         suffixText: sufijo,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
       ),
     );
   }

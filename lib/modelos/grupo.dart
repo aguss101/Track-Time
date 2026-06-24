@@ -3,11 +3,7 @@ class Grupo {
   final String nombre;
   final String? color;
 
-  const Grupo({
-    required this.id,
-    required this.nombre,
-    this.color,
-  });
+  const Grupo({required this.id, required this.nombre, this.color});
 
   factory Grupo.fromJson(Map<String, dynamic> json) {
     return Grupo(
@@ -18,10 +14,7 @@ class Grupo {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'nombre': nombre,
-      if (color != null) 'color': color,
-    };
+    return {'nombre': nombre, if (color != null) 'color': color};
   }
 
   Grupo copyWith({String? nombre, String? color}) {

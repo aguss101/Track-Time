@@ -30,9 +30,7 @@ ThemeData construirTema() {
     cardTheme: CardThemeData(
       color: Colores.card,
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     iconTheme: const IconThemeData(color: Colores.textoPrimario),
     inputDecorationTheme: InputDecorationTheme(
@@ -59,9 +57,7 @@ ThemeData construirTema() {
         foregroundColor: Colors.black,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
       ),
     ),

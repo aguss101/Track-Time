@@ -6,11 +6,9 @@ class Metrica {
   final int restante;
   final int excedente;
 
-
   final int? diasRestantes;
   final bool? sinDiasAsignados;
   final int? promedioDiarioRestante;
-
 
   final int? semanasRestantes;
   final int? promedioSemanalRestante;
@@ -34,13 +32,16 @@ class Metrica {
       acumulado: leer('acumulado'),
       restante: leer('restante'),
       excedente: leer('excedente'),
-      diasRestantes: json['dias_restantes'] == null ? null : leer('dias_restantes'),
+      diasRestantes: json['dias_restantes'] == null
+          ? null
+          : leer('dias_restantes'),
       sinDiasAsignados: json['sin_dias_asignados'] as bool?,
       promedioDiarioRestante: json['promedio_diario_restante'] == null
           ? null
           : leer('promedio_diario_restante'),
-      semanasRestantes:
-          json['semanas_restantes'] == null ? null : leer('semanas_restantes'),
+      semanasRestantes: json['semanas_restantes'] == null
+          ? null
+          : leer('semanas_restantes'),
       promedioSemanalRestante: json['promedio_semanal_restante'] == null
           ? null
           : leer('promedio_semanal_restante'),

@@ -21,6 +21,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_native_splash: ^2.4.1
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
@@ -35,3 +36,11 @@ flutter_native_splash:
   android: true
   ios: false
   web: false
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "launcher/icono.png"
+  adaptive_icon_background: "#1E1E21"
+  adaptive_icon_foreground: "launcher/icono_foreground.png"
+  min_sdk_android: 21

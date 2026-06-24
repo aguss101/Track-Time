@@ -60,8 +60,10 @@ final metricasGlobalProvider = FutureProvider<MetricasActividad>((ref) async {
   );
 });
 
-final metricasProvider =
-    FutureProvider.family<MetricasActividad, int>((ref, idActividad) async {
+final metricasProvider = FutureProvider.family<MetricasActividad, int>((
+  ref,
+  idActividad,
+) async {
   final db = ref.read(supabaseProvider);
   final resultados = await Future.wait([
     db.obtenerMetricaDiaria(idActividad),

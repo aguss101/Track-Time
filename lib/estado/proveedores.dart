@@ -11,8 +11,9 @@ final supabaseProvider = Provider<Supabase>((ref) => Supabase.instancia);
 // GRUPOS
 // ════════════════════════════════════════════════════
 
-final gruposProvider =
-    AsyncNotifierProvider<GruposNotifier, List<Grupo>>(GruposNotifier.new);
+final gruposProvider = AsyncNotifierProvider<GruposNotifier, List<Grupo>>(
+  GruposNotifier.new,
+);
 
 class GruposNotifier extends AsyncNotifier<List<Grupo>> {
   Supabase get _db => ref.read(supabaseProvider);
@@ -46,7 +47,8 @@ class GruposNotifier extends AsyncNotifier<List<Grupo>> {
 
 final actividadesProvider =
     AsyncNotifierProvider<ActividadesNotifier, List<Actividad>>(
-        ActividadesNotifier.new);
+      ActividadesNotifier.new,
+    );
 
 class ActividadesNotifier extends AsyncNotifier<List<Actividad>> {
   Supabase get _db => ref.read(supabaseProvider);
@@ -81,7 +83,8 @@ class ActividadesNotifier extends AsyncNotifier<List<Actividad>> {
 
 final resumenProvider =
     AsyncNotifierProvider<ResumenNotifier, List<ResumenActividad>>(
-        ResumenNotifier.new);
+      ResumenNotifier.new,
+    );
 
 class ResumenNotifier extends AsyncNotifier<List<ResumenActividad>> {
   @override

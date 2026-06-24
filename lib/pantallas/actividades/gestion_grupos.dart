@@ -39,7 +39,9 @@ class _GestionGruposState extends ConsumerState<_GestionGrupos> {
     if (nombre.isEmpty) return;
     setState(() => _agregando = true);
     try {
-      await ref.read(gruposProvider.notifier).crear(Grupo(id: 0, nombre: nombre));
+      await ref
+          .read(gruposProvider.notifier)
+          .crear(Grupo(id: 0, nombre: nombre));
       _nuevo.clear();
     } catch (e) {
       _error('No se pudo crear: $e');
@@ -116,8 +118,7 @@ class _GestionGruposState extends ConsumerState<_GestionGrupos> {
 
   void _error(String msg) {
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -177,11 +178,14 @@ class _GestionGruposState extends ConsumerState<_GestionGrupos> {
           grupos.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(16),
-              child:
-                  Center(child: CircularProgressIndicator(color: Colores.acento)),
+              child: Center(
+                child: CircularProgressIndicator(color: Colores.acento),
+              ),
             ),
-            error: (e, _) => Text('Error: $e',
-                style: const TextStyle(color: Colores.textoSecundario)),
+            error: (e, _) => Text(
+              'Error: $e',
+              style: const TextStyle(color: Colores.textoSecundario),
+            ),
             data: (lista) {
               if (lista.isEmpty) {
                 return const Padding(
@@ -201,20 +205,27 @@ class _GestionGruposState extends ConsumerState<_GestionGrupos> {
                     final g = lista[i];
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(g.nombre,
-                          style:
-                              const TextStyle(color: Colores.textoPrimario)),
+                      title: Text(
+                        g.nombre,
+                        style: const TextStyle(color: Colores.textoPrimario),
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit_outlined,
-                                size: 20, color: Colores.textoSecundario),
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              size: 20,
+                              color: Colores.textoSecundario,
+                            ),
                             onPressed: () => _renombrar(g),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                size: 20, color: Colores.textoSecundario),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 20,
+                              color: Colores.textoSecundario,
+                            ),
                             onPressed: () => _eliminar(g),
                           ),
                         ],

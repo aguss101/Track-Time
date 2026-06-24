@@ -4,8 +4,9 @@ class CronometroNativo {
   CronometroNativo._();
   static final CronometroNativo instancia = CronometroNativo._();
 
-  static const MethodChannel _canal =
-      MethodChannel('com.agustin.track_time/cronometro');
+  static const MethodChannel _canal = MethodChannel(
+    'com.agustin.track_time/cronometro',
+  );
 
   Future<void> iniciar({
     required String nombreActividad,
