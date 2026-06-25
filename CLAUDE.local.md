@@ -16,4 +16,4 @@
 - Solo un desarrollador en el proyecto (Agustin)
 
 ## Aviso al terminar tareas
-Cada vez que termines de ejecutar una tarea, ejecutá el comando `curl -s -d 'Claudio acabó' ntfy.sh/claude_respuesta > NUL`. Asegurate de redirigir la salida a NUL para que no se genere ningún archivo adjunto.
+Configurado como hook global `Stop` en `~/.claude/settings.json` (aplica a todos los proyectos): `curl -s -o /dev/null -d 'Claudio acabó' ntfy.sh/claude_respuesta`. No requiere acción manual.
